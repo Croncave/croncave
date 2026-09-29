@@ -31,3 +31,14 @@ Two constraints shaped the answer. Contributors and CI must not need an account 
 - Because `SENTRY_DSN` is read at startup, an invalid DSN stops the service rather than silently disabling reporting. The same applies to `CRONCAVE_ENV` and `CRONCAVE_LOG_FORMAT`.
 - `Config`'s `Debug` implementation redacts the DSN, so dumping a configuration into a log cannot leak it.
 - Log volume is now a cost we control with `RUST_LOG` per environment. Workspace agents buffer and forward logs over the relay (see `docs/architecture.md`), and how those reach the same place is step 1's problem, not step 0's.
+
+## Amendment, 2026-09-29: the JavaScript SDK's collection defaults
+
+Wiring the same posture into the web app turned out not to be symmetrical. The Rust SDK has one switch, `send_default_pii`, which is off by default. The JavaScript SDK version 11 replaced that switch with a `dataCollection` object whose defaults are permissive: cookies, request and response headers, request and response bodies, URL query parameters, database query data, queue arguments and the values of local variables in stack frames are all collected unless you say otherwise.
+
+For a product running people's private workspaces those are the wrong defaults, and they are the kind that arrive quietly in a dependency upgrade. So `web/src/lib/sentry.ts` turns all of them off explicitly, both hooks use it, and a test asserts that every field in it collects nothing — which fails if a field is ever switched on, or if a new permissive field is added and defaulted in. Source context lines are the one thing left on: that is our own code, and it is what makes a stack trace readable.
+
+Two related notes from the same wiring:
+
+- Disabling performance tracing means leaving `tracesSampleRate` **unset**. Setting it to `0` still turns tracing on and then samples none of it.
+- The browser can only be given values whose names begin with `PUBLIC_`, so `PUBLIC_SENTRY_DSN` and `PUBLIC_CRONCAVE_ENV` mirror the private variables for code running in the page. The private ones stay authoritative everywhere on the server.
