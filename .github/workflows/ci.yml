@@ -51,6 +51,23 @@ jobs:
     needs: detect
     if: needs.detect.outputs.rust == 'true'
     runs-on: ubuntu-latest
+    services:
+      # The database tests run against a real Postgres, never a stub.
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: croncave
+          POSTGRES_PASSWORD: croncave
+          POSTGRES_DB: croncave
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U croncave -d croncave"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://croncave:croncave@localhost:5432/croncave
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

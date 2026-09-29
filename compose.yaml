@@ -1,0 +1,27 @@
+# Local development services. Start with: docker compose up -d
+#
+# These credentials are local-only and deliberately boring; nothing here is a
+# secret. Staging and production get theirs from each environment's secret
+# store (see docs/conventions.md).
+
+name: croncave
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: croncave
+      POSTGRES_PASSWORD: croncave
+      POSTGRES_DB: croncave
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U croncave -d croncave"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:

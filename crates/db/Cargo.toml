@@ -1,0 +1,23 @@
+[package]
+name = "croncave-db"
+description = "Postgres schema, migrations and connection setup."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+sqlx.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# Used by the migrate example, the way a real binary uses them.
+croncave-telemetry = { path = "../telemetry" }
+dotenvy.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+uuid.workspace = true
