@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidebar</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../../system/tokens.css">
+<link rel="stylesheet" href="../../system/components.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif}
+a{color:inherit}
+@keyframes cc-pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+.cc-pulse{animation:cc-pulse 1.6s ease-in-out infinite}
+</style>
+</helmet>
+<nav aria-label="Main" data-theme="{{theme}}" class="cc-root" style="width: 248px; height: 820px; box-sizing: border-box; padding: 16px 12px; display: flex; flex-direction: column; gap: 16px; background: var(--surface-sunken); border-right: 1px solid var(--border); color: var(--ink); font-family: var(--font-sans);">
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 0 0 6px; height: 32px;">
+<span style="width: 18px; height: 18px; border-radius: 4px; background: var(--accent); flex: none;"></span>
+<span style="flex-grow: 1; font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em;">Croncave</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<button type="button" class="cc-btn cc-btn--primary" style="width: 100%; justify-content: flex-start;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+<span style="flex-grow: 1; text-align: left;">New workspace</span>
+<span style="font-family: var(--font-mono); font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--on-accent); opacity: 0.8;">N</span>
+</button>
+<button type="button" style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-subtle); font-family: var(--font-sans); font-size: 14px; line-height: 20px; cursor: pointer;">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<span style="flex-grow: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Search or run a command</span>
+<span style="font-family: var(--font-mono); font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--border);">⌘K</span>
+</button>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<a class="cc-nav-item" href="HomeTop.dc.html" aria-current="{{cur.home}}">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+Home
+<sc-if value="{{full}}" hint-placeholder-val="{{true}}"><span class="cc-nav-item__count" style="color: var(--status-needs);">3</span></sc-if>
+</a>
+<a class="cc-nav-item" href="#">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+Templates
+</a>
+<a class="cc-nav-item" href="#">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg>
+Activity
+</a>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px 10px;">
+<span class="cc-label">Workspaces</span>
+<button type="button" aria-label="New workspace" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: transparent; color: var(--ink-muted); cursor: pointer;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+<sc-if value="{{full}}" hint-placeholder-val="{{true}}">
+<a class="cc-nav-item" href="WorkspaceDetail.dc.html" aria-current="{{cur.rea}}" title="Real Estate App: needs you">
+<span class="cc-dot cc-dot--needs"></span>
+<span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Real Estate App</span>
+</a>
+<a class="cc-nav-item" href="#" title="Lead Enrichment: failed">
+<span class="cc-dot cc-dot--failed"></span>
+<span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Lead Enrichment</span>
+</a>
+<a class="cc-nav-item" href="#" style="color: var(--ink-subtle); font-weight: 400;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+Show 3 more
+</a>
+</sc-if>
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; padding: 6px 10px; font-size: 13px; line-height: 18px; color: var(--ink-subtle);">None yet. A workspace is a computer for one project.</p>
+</sc-if>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px 10px;">
+<span class="cc-label">Tasks</span>
+<button type="button" aria-label="New task" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: transparent; color: var(--ink-muted); cursor: pointer;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+<sc-if value="{{full}}" hint-placeholder-val="{{true}}">
+<a class="cc-nav-item" href="#" title="Stock Watcher: live, watching">
+<span class="cc-dot cc-dot--live"></span>
+<span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Stock Watcher</span>
+</a>
+<a class="cc-nav-item" href="TaskDetail.dc.html" aria-current="{{cur.cp}}" title="Competitor Prices: asleep, next run at 06:00">
+<span class="cc-dot cc-dot--asleep"></span>
+<span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Competitor Prices</span>
+</a>
+<a class="cc-nav-item" href="#" style="color: var(--ink-subtle); font-weight: 400;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+Show 2 more
+</a>
+</sc-if>
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; padding: 6px 10px; font-size: 13px; line-height: 18px; color: var(--ink-subtle);">None yet. A task is one job that runs on its own.</p>
+</sc-if>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<a href="#" aria-label="Usage this month: {{spend}} of $50 cap, {{awake}} hours awake" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: inherit; text-decoration: none;">
+<div style="display: flex; align-items: baseline; justify-content: space-between;">
+<span class="cc-label">This month</span>
+<span style="font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-subtle);">{{awake}}h awake</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 6px;">
+<span style="font-family: var(--font-mono); font-size: 16px; line-height: 22px; font-weight: 500;">{{spend}}</span>
+<span style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">of $50 cap</span>
+</div>
+<div role="progressbar" aria-label="Spending this month" aria-valuenow="{{pct}}" aria-valuemin="0" aria-valuemax="100" style="height: 4px; border-radius: 2px; background: var(--border);">
+<div style="width: {{pct}}%; height: 4px; border-radius: 2px; background: var(--accent);"></div>
+</div>
+</a>
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 4px 0 6px;">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex: none;">T</span>
+<div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 500;">Treasure</span>
+<span style="font-size: 12px; line-height: 16px; color: var(--ink-muted);">Personal · Plus</span>
+</div>
+<button type="button" aria-label="Settings" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--ink-muted); cursor: pointer;">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+</button>
+</div>
+
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"current":{"editor":"enum","options":["home","rea","cp"],"default":"home"},"empty":{"editor":"boolean","default":false},"$preview":{"width":248,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+const c = this.props.current ?? 'home';
+const cur = { home: 'false', rea: 'false', cp: 'false' };
+cur[c] = 'page';
+const empty = this.props.empty === true || this.props.empty === 'true';
+return { theme: this.props.theme ?? 'light', cur, empty, full: !empty,
+  spend: empty ? '$0.00' : '$18.40', awake: empty ? '0' : '31', pct: empty ? 0 : 37 };
+}
+}
+</script>
+</body>
+</html>

@@ -47,6 +47,7 @@ cp .env.example .env     # once per clone
 - **pnpm, pinned by the `packageManager` field** and enabled with `corepack enable pnpm`. The lockfile is committed and CI installs with `--frozen-lockfile`.
 - **Tests are colocated** as `*.test.ts` next to the module, run by Vitest.
 - **Prettier and ESLint are not negotiable**; `pnpm format` fixes what it can.
+- **The design system is imported, never copied.** `web/src/app.css` reads `docs/design/system/tokens.css` and `components.css` directly, because that folder is a snapshot of the canvas and gets re-exported. Use tokens (`var(--space-4)`), never raw values.
 - **Shared meaning stays in step with Rust.** `web/src/lib/environment.ts` deliberately mirrors `Environment` in `crates/telemetry`. When the protocol crate arrives, generate TypeScript from Rust rather than writing a third copy by hand.
 
 ## Dependencies
@@ -54,6 +55,18 @@ cp .env.example .env     # once per clone
 - **pnpm refuses packages published in the last day or so.** That is a supply-chain guard, and pnpm will offer to write a `minimumReleaseAgeExclude` list to get past it. **Never accept that offer** — pin to the previous release instead, as `typescript-eslint` is pinned to `~8.70.1`.
 - **Prefer `rustls` over `native-tls`**, so nothing drags OpenSSL into the agent's static binary.
 - **Check a new dependency's defaults, not just its API.** Sentry's JavaScript SDK defaults to collecting cookies, headers and request bodies; `web/src/lib/sentry.ts` turns that off and a test holds it off.
+
+## Talking to Postgres
+
+**Queries are runtime-checked (`sqlx::query`), not the `query!` macros.** The macros check SQL against a live schema at compile time, which is genuinely valuable, but it means `cargo build` needs either a running database or an `.sqlx` cache that someone has to remember to regenerate. Step 0 deliberately made the checks runnable without services, and that is worth more. The tests cover the queries against a real Postgres instead.
+
+## Tests
+
+- **Unit and integration tests live with their crate**; the database ones run against a real Postgres through `#[sqlx::test]`, which gives each test its own database.
+- **End-to-end tests live in `e2e/`**, not in `web/`. They drive a real browser against a real control plane against a real Postgres, so they belong to the whole system rather than to the web app.
+- **Never add a test-only endpoint to production code.** The end-to-end tests read a sign-in link from the control plane's log, the way a developer does, because only the token's hash is stored and there is deliberately no way to read one back. A convenience endpoint would be a bypass living in the shipped binary.
+- **Give each end-to-end test its own account** (`freshEmail()`), so runs never collide with each other or with whatever is already in the database.
+- **A test that cannot fail is not a test.** When a test guards something that matters, break the thing once and watch that test — and ideally only that test — go red.
 
 ## Database migrations
 
@@ -69,7 +82,7 @@ Migrations will live in `crates/db` (created in the accounts and workspaces step
 
 ## Decisions
 
-**Know which docs you may change.** `product-definition.md`, `architecture.md` and `pricing.md` are snapshots of living docs on claude.ai: read-only here, and the living doc wins. `AGENTS.md`, `delivery.md`, this file and `decisions/` are repo-native and are where decisions made while building are recorded. When a decision leaves a gap in a snapshot, tell the user the exact upstream wording rather than editing the snapshot.
+**Know which docs you may change.** `product-definition.md`, `architecture.md` and `pricing.md` are snapshots of living docs on claude.ai, and `design/` is a snapshot of the design canvas: read-only here, and the living doc or canvas wins. `AGENTS.md`, `delivery.md`, this file and `decisions/` are repo-native and are where decisions made while building are recorded. When a decision leaves a gap in a snapshot, tell the user the exact upstream wording rather than editing the snapshot.
 
 **One copy of each thing.** `delivery.md` owns the repository layout and the build order; `AGENTS.md` summarises and links. Don't paste either back — keeping two copies is what let them drift.
 

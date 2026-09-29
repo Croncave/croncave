@@ -7,7 +7,7 @@ This file is the shared brief for any AI coding agent working in this repository
 Croncave gives people a private computer in the cloud that keeps working after they close their laptop. It's managed entirely through a web app (no remote desktop). Users hand off overnight AI coding sessions, scheduled scripts, monitors and small apps. They come back to plain-language results, a change review, or a private preview of what was built.
 
 - **App:** `app.croncave.com` (not live yet). **Previews:** a separately registered domain, one subdomain per preview (name to be picked).
-- **Status:** build step 0 is done and merged — Cargo workspace, SvelteKit app, structured logging, error reporting, CI green. Step 1 (accounts and workspaces) is next (see [Build order](#build-order-for-r1)).
+- **Status:** step 1 (accounts and workspaces) is built — sign-in by emailed link, a personal team, workspace records, the app shell — and awaits its first green CI run. Step 2 (workspace compute) is next (see [Build order](#build-order-for-r1)).
 - **First customers:** technical founders (three are lined up for the R1 alpha). Non-technical users are the long-term goal.
 - **Region:** US only, for users, compute and data.
 
@@ -21,14 +21,14 @@ Croncave gives people a private computer in the cloud that keeps working after t
 | [docs/delivery.md](docs/delivery.md) | **Owns the repository layout and the build order.** Also build artifacts, environments and testing |
 | [docs/conventions.md](docs/conventions.md) | How code is written, checked and landed |
 | [docs/decisions/](docs/decisions/) | Decision log. Add an entry for every meaningful decision |
-| [docs/design/mockups.md](docs/design/mockups.md) | Links to the UI mockups |
+| [docs/design/](docs/design/) | **The design system and every designed screen.** Read `design/system/README.md` before any UI work |
 | [docs/history/planning-transcript.md](docs/history/planning-transcript.md) | The full planning conversation, for the reasoning behind decisions |
 
 **Know which kind of doc you are reading before you change it.**
 
 | Kind | Which | Rule |
 | --- | --- | --- |
-| **Snapshot** of a living doc on claude.ai | `product-definition.md`, `architecture.md`, `pricing.md` | Read-only here. The living doc wins if they disagree. Don't edit the snapshot to record a decision — tell the user what to change upstream |
+| **Snapshot** of a living doc on claude.ai | `product-definition.md`, `architecture.md`, `pricing.md`, `design/` | Read-only here. The living doc or canvas wins if they disagree. Don't edit the snapshot to record a decision — tell the user what to change upstream, or to re-export |
 | **Repo-native** | `AGENTS.md`, `delivery.md`, `conventions.md`, `decisions/` | Ours. This is where decisions made while building are recorded |
 
 A decision made in code lands in a repo-native doc and the snapshots will not know about it. When that gap matters, say so and give the user the exact upstream wording.
@@ -87,7 +87,7 @@ Only `crates/telemetry` and `web/` exist. Create each other part when its build 
 
 **0** Repo and CI ✅ · **1** Accounts and workspaces · **2** Workspace compute · **3** Connection · **4** Claude Code sessions · **5** GitHub and change review · **6** Scheduled runs · **7** Home and timeline · **8** Previews, templates and dashboards · **9** Hardening
 
-**Step 1 is next.** Each step is delivered in slices small enough to review in one sitting — step 0 took five.
+**Step 2 is next.** Each step is delivered in slices small enough to review in one sitting — step 0 took five, step 1 took eight.
 
 ## Testing and environments
 

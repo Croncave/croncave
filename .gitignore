@@ -27,3 +27,6 @@ coverage/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# End-to-end scratch (captured server output)
+/e2e/.tmp/
