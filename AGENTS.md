@@ -7,7 +7,7 @@ This file is the shared brief for any AI coding agent working in this repository
 Croncave gives people a private computer in the cloud that keeps working after they close their laptop. It's managed entirely through a web app (no remote desktop). Users hand off overnight AI coding sessions, scheduled scripts, monitors and small apps. They come back to plain-language results, a change review, or a private preview of what was built.
 
 - **App:** `app.croncave.com` (not live yet). **Previews:** a separately registered domain, one subdomain per preview (name to be picked).
-- **Status:** planning is done; no product code exists yet. We are at build step 0 (see [Build order](#build-order-for-r1)).
+- **Status:** build step 0 is built — Cargo workspace, SvelteKit app, logging, error reporting, CI — and awaits its first green run on GitHub. Step 1 (agent + relay) is next (see [Build order](#build-order-for-r1)).
 - **First customers:** technical founders (three are lined up for the R1 alpha). Non-technical users are the long-term goal.
 - **Region:** US only, for users, compute and data.
 
@@ -19,6 +19,7 @@ Croncave gives people a private computer in the cloud that keeps working after t
 | [docs/architecture.md](docs/architecture.md) | System design: compute, lifecycle, the outgoing connection, previews, AI access, models, scheduler, data model, security, stack, build order |
 | [docs/pricing.md](docs/pricing.md) | Tiers, usage billing, caps, free-tier guardrails |
 | [docs/delivery.md](docs/delivery.md) | Repository layout, build artifacts, environments, testing, milestone checkpoints |
+| [docs/conventions.md](docs/conventions.md) | How code is written, checked and landed |
 | [docs/decisions/](docs/decisions/) | Decision log. Add an entry for every meaningful decision |
 | [docs/design/mockups.md](docs/design/mockups.md) | Links to the UI mockups |
 | [docs/history/planning-transcript.md](docs/history/planning-transcript.md) | The full planning conversation, for the reasoning behind decisions |
@@ -110,9 +111,13 @@ Each step ends with a check that proves it works before moving on.
 - **Staging:** separate Fly organisation, its own domain and preview domain, Stripe test mode, a development GitHub App, a low-limit Anthropic key. Nightly end-to-end tests against real Fly machines.
 - **Production:** `app.croncave.com`, invite-only for the alpha, feature flags for new features, agent updates rolled out to a few workspaces first.
 
-## Conventions (to be refined in step 0)
+## Conventions
 
-- Rust: stable toolchain, `cargo fmt`, `cargo clippy -- -D warnings`, tests alongside code. Errors via `thiserror` in libraries and `anyhow` at binaries.
-- TypeScript: strict mode, `pnpm`, Prettier + ESLint, `svelte-check`.
+**[docs/conventions.md](docs/conventions.md) is the full list.** Read it before writing code. In brief:
+
+- One command runs every check: `./scripts/check.sh`. CI calls the same script, so add new checks there, not to the workflow.
+- Rust: edition 2024, `croncave-*` crate names, shared versions in `[workspace.dependencies]`, `thiserror` in libraries and `anyhow` at binaries, no `unsafe`, tests alongside code.
+- TypeScript: strict mode, `pnpm` via corepack, Prettier + ESLint, `svelte-check`, colocated `*.test.ts`.
+- Logging through `croncave-telemetry`; never log a secret. Every variable the code reads gets an entry in `.env.example`.
 - Database migrations must work with both the old and new code during a rollout (expand, then contract).
-- Commit messages: imperative summary line, body explaining why.
+- Commit messages: imperative summary line, body explaining why. The person commits, not the agent.

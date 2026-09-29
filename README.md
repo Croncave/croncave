@@ -2,7 +2,7 @@
 
 A private computer in the cloud that keeps working after you close your laptop. Hand off overnight AI coding sessions, scheduled scripts and monitors, then come back to plain-language results, a change review, or a private preview of what was built.
 
-**Status:** planning complete, implementation not started. This repository currently holds the project context and CI only.
+**Status:** build step 0 is done — a Cargo workspace, a SvelteKit app, structured logging, error reporting and CI. No product features yet; step 1 builds the agent and relay.
 
 ## Getting started
 
@@ -27,6 +27,7 @@ Add a variable there whenever you add one to the code.
   - [architecture.md](docs/architecture.md): technical architecture
   - [pricing.md](docs/pricing.md): tiers and usage billing
   - [delivery.md](docs/delivery.md): repository layout, environments, testing and milestones
+  - [conventions.md](docs/conventions.md): how code is written, checked and landed
   - [decisions/](docs/decisions/): decision log
   - [design/mockups.md](docs/design/mockups.md): UI mockups
   - [history/planning-transcript.md](docs/history/planning-transcript.md): the planning conversation
