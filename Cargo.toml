@@ -13,6 +13,7 @@ publish = false
 # Add a dependency here the first time a second crate needs it.
 [workspace.dependencies]
 anyhow = "1"
+dotenvy = "0.15"
 serde = { version = "1", features = ["derive"] }
 sentry = { version = "0.49", default-features = false, features = [
     "backtrace",

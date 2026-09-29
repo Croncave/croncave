@@ -1,10 +1,12 @@
 //! Structured logging for Croncave services.
 //!
 //! Every binary calls [`init`] once at startup and holds the returned
-//! [`Guard`] for as long as it runs:
+//! [`Guard`] for as long as it runs. Load `.env` first, so a local run picks
+//! up the settings in it (see `.env.example`):
 //!
 //! ```no_run
 //! # fn main() -> Result<(), croncave_telemetry::Error> {
+//! dotenvy::dotenv().ok();
 //! let config = croncave_telemetry::Config::from_env("relay", env!("CARGO_PKG_VERSION"))?;
 //! let _telemetry = croncave_telemetry::init(config)?;
 //! tracing::info!(port = 443, "relay listening");

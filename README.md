@@ -4,6 +4,19 @@ A private computer in the cloud that keeps working after you close your laptop. 
 
 **Status:** planning complete, implementation not started. This repository currently holds the project context and CI only.
 
+## Getting started
+
+Prerequisites: a stable Rust toolchain (`rustup`). Node and pnpm join the list
+when the web app lands.
+
+```
+cp .env.example .env     # local settings; git-ignored, never committed
+./scripts/check.sh       # everything CI runs
+```
+
+`.env.example` lists every variable the code reads, with a comment on each.
+Add a variable there whenever you add one to the code.
+
 ## Start here
 
 - **[AGENTS.md](AGENTS.md):** the full project brief (product, principles, architecture, hard rules, build order). Coding agents read this first; `CLAUDE.md` imports it for Claude Code.

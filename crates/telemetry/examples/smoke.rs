@@ -13,6 +13,11 @@
 use croncave_telemetry::{Config, Error};
 
 fn main() -> Result<(), Error> {
+    // Every binary starts this way: load `.env` if there is one, before
+    // reading any configuration. Real environment variables win over the
+    // file, and in staging and production there is no file at all.
+    dotenvy::dotenv().ok();
+
     let config = Config::from_env("telemetry-smoke", env!("CARGO_PKG_VERSION"))?;
     let telemetry = croncave_telemetry::init(config)?;
 
