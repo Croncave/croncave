@@ -44,7 +44,9 @@
       {#each data.workspaces as workspace (workspace.id)}
         <li>
           <Box size={16} aria-hidden="true" />
-          <span class="name">{workspace.name}</span>
+          <a class="name" href={resolve('/(app)/workspaces/[id]', { id: workspace.id })}>
+            {workspace.name}
+          </a>
           <span class="cc-pill cc-pill--asleep">
             <span class="cc-dot cc-dot--asleep"></span>
             {workspace.state}
@@ -109,6 +111,11 @@
   .name {
     flex: 1;
     font-weight: 500;
+    text-decoration: none;
+  }
+
+  .name:hover {
+    text-decoration: underline;
   }
 
   time {
