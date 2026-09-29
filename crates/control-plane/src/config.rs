@@ -14,6 +14,8 @@ pub const ENV_DB_MAX_CONNECTIONS: &str = "CRONCAVE_DB_MAX_CONNECTIONS";
 pub const ENV_APP_URL: &str = "CRONCAVE_APP_URL";
 /// Which environment this is, shared with `croncave-telemetry`.
 pub const ENV_ENVIRONMENT: &str = "CRONCAVE_ENV";
+/// Where workspaces' computers come from.
+pub const ENV_COMPUTE_DRIVER: &str = "CRONCAVE_COMPUTE_DRIVER";
 
 /// Loopback by default: the control plane is reached through the web app, and
 /// nothing should bind a public interface by accident.
@@ -22,6 +24,42 @@ pub const DEFAULT_BIND: &str = "127.0.0.1:8080";
 pub const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
 /// The SvelteKit dev server, which is where a person's browser actually is.
 pub const DEFAULT_APP_URL: &str = "http://localhost:5173";
+
+/// Where a workspace's computer comes from.
+///
+/// One value per driver in `croncave-compute`. `fly` joins them once that
+/// account and its terms are settled.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ComputeDriverChoice {
+    /// In memory. Fast, and real enough for everything above the driver.
+    #[default]
+    Fake,
+    /// Docker on this machine.
+    Local,
+}
+
+impl ComputeDriverChoice {
+    /// The name used in configuration.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Fake => "fake",
+            Self::Local => "local",
+        }
+    }
+}
+
+impl std::str::FromStr for ComputeDriverChoice {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "fake" => Ok(Self::Fake),
+            "local" | "docker" => Ok(Self::Local),
+            other => Err(Error::UnknownComputeDriver(other.to_owned())),
+        }
+    }
+}
 
 /// Everything [`crate::serve`] needs.
 ///
@@ -40,6 +78,8 @@ pub struct Config {
     /// Which environment this is. Decides whether cookies are `Secure` and
     /// how sign-in links are delivered.
     pub environment: croncave_telemetry::Environment,
+    /// Where workspaces' computers come from.
+    pub compute_driver: ComputeDriverChoice,
 }
 
 impl std::fmt::Debug for Config {
@@ -50,6 +90,7 @@ impl std::fmt::Debug for Config {
             .field("db_max_connections", &self.db_max_connections)
             .field("app_url", &self.app_url)
             .field("environment", &self.environment)
+            .field("compute_driver", &self.compute_driver)
             .finish()
     }
 }
@@ -103,12 +144,18 @@ impl Config {
             _ => croncave_telemetry::Environment::default(),
         };
 
+        let compute_driver = match var(ENV_COMPUTE_DRIVER) {
+            Some(value) if !value.trim().is_empty() => value.parse()?,
+            _ => ComputeDriverChoice::default(),
+        };
+
         Ok(Self {
             bind,
             database_url,
             db_max_connections,
             app_url,
             environment,
+            compute_driver,
         })
     }
 }
@@ -168,6 +215,36 @@ mod tests {
         .unwrap_err();
 
         assert!(matches!(error, Error::InvalidBind(_)), "{error}");
+    }
+
+    #[test]
+    fn the_compute_driver_defaults_to_the_fake_one() {
+        let config = Config::from_vars(vars(&[(ENV_DATABASE_URL, URL)])).unwrap();
+
+        assert_eq!(config.compute_driver, ComputeDriverChoice::Fake);
+    }
+
+    #[test]
+    fn the_compute_driver_can_be_chosen() {
+        let config = Config::from_vars(vars(&[
+            (ENV_DATABASE_URL, URL),
+            (ENV_COMPUTE_DRIVER, "local"),
+        ]))
+        .unwrap();
+
+        assert_eq!(config.compute_driver, ComputeDriverChoice::Local);
+    }
+
+    #[test]
+    fn a_compute_driver_we_do_not_have_is_refused() {
+        let error = Config::from_vars(vars(&[
+            (ENV_DATABASE_URL, URL),
+            (ENV_COMPUTE_DRIVER, "fly"),
+        ]))
+        .unwrap_err();
+
+        // Better to stop than to quietly run everything on the fake.
+        assert!(matches!(error, Error::UnknownComputeDriver(_)), "{error}");
     }
 
     #[test]

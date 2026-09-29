@@ -15,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::State;
 use crate::actor::Actor;
 use crate::auth::Error as AuthError;
+use crate::{State, orchestrator};
 
 /// The longest a workspace name may be.
 const MAX_NAME: usize = 100;
@@ -36,7 +36,7 @@ pub struct WorkspaceView {
     pub id: Uuid,
     /// Its name.
     pub name: String,
-    /// Where it is in the lifecycle. Always `asleep` until step 2.
+    /// Where it is in the lifecycle.
     pub state: String,
     /// When it was made.
     #[serde(with = "time::serde::rfc3339")]
@@ -58,6 +58,12 @@ pub enum Error {
     #[error(transparent)]
     Auth(#[from] AuthError),
 
+    /// The compute provider could not do what was asked. Separate from
+    /// `Internal` because a person can act on it: try again, or look at
+    /// whether Docker is running.
+    #[error("the workspace's computer could not be reached")]
+    Compute(#[source] croncave_compute::Error),
+
     /// Something on our side failed.
     #[error("something went wrong")]
     Internal,
@@ -74,6 +80,8 @@ impl axum::response::IntoResponse for Error {
         let status = match self {
             Self::InvalidName => StatusCode::BAD_REQUEST,
             Self::NotFound => StatusCode::NOT_FOUND,
+            // The request was fine; the provider is the problem.
+            Self::Compute(_) => StatusCode::BAD_GATEWAY,
             Self::Auth(_) | Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
@@ -171,13 +179,73 @@ pub async fn get(
     actor: Actor,
     Path(id): Path<Uuid>,
 ) -> Result<Json<WorkspaceView>, Error> {
+    // Ask the provider rather than trusting the row: a container can be
+    // removed behind our back, and reporting a stale "awake" would be a lie
+    // someone acts on. A provider that cannot be reached leaves the stored
+    // state alone rather than failing the whole read.
+    match orchestrator::status(&state.pool, state.compute.as_ref(), actor.team_id, id).await {
+        Ok(_) => {}
+        Err(orchestrator::Error::NotFound) => return Err(Error::NotFound),
+        Err(error) => tracing::warn!(%error, workspace_id = %id, "could not refresh the state"),
+    }
+
+    read(&state, actor, id).await
+}
+
+impl From<orchestrator::Error> for Error {
+    fn from(error: orchestrator::Error) -> Self {
+        match error {
+            orchestrator::Error::NotFound => Self::NotFound,
+            orchestrator::Error::Compute(error) => Self::Compute(error),
+            orchestrator::Error::Database(error) => {
+                tracing::error!(%error, "the database refused");
+                Self::Internal
+            }
+        }
+    }
+}
+
+/// Start a workspace, making its computer the first time.
+///
+/// # Errors
+///
+/// Returns [`Error::NotFound`] if the workspace is not this team's, or
+/// [`Error::Compute`] if the provider refuses.
+pub async fn start(
+    AxumState(state): AxumState<State>,
+    actor: Actor,
+    Path(id): Path<Uuid>,
+) -> Result<Json<WorkspaceView>, Error> {
+    orchestrator::start(&state.pool, state.compute.as_ref(), actor.team_id, id).await?;
+
+    read(&state, actor, id).await
+}
+
+/// Stop a workspace, keeping its disk.
+///
+/// # Errors
+///
+/// Returns [`Error::NotFound`] if the workspace is not this team's, or
+/// [`Error::Compute`] if the provider refuses.
+pub async fn stop(
+    AxumState(state): AxumState<State>,
+    actor: Actor,
+    Path(id): Path<Uuid>,
+) -> Result<Json<WorkspaceView>, Error> {
+    orchestrator::stop(&state.pool, state.compute.as_ref(), actor.team_id, id).await?;
+
+    read(&state, actor, id).await
+}
+
+/// The workspace as it stands now, after the orchestrator has written down
+/// what the provider said.
+async fn read(state: &State, actor: Actor, id: Uuid) -> Result<Json<WorkspaceView>, Error> {
     let workspace: Option<WorkspaceView> = sqlx::query_as(
         "select id, name, state, created_at
            from workspaces
           where id = $1 and team_id = $2",
     )
     .bind(id)
-    // The team is what makes this safe: an id alone never reaches a row.
     .bind(actor.team_id)
     .fetch_optional(&state.pool)
     .await

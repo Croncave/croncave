@@ -8,6 +8,7 @@ pub mod auth;
 pub mod config;
 mod health;
 pub mod mail;
+pub mod orchestrator;
 mod tokens;
 pub mod workspaces;
 
@@ -21,6 +22,7 @@ use axum::routing::{get, post};
 use croncave_db::Pool;
 use tower_http::trace::TraceLayer;
 
+use croncave_compute::ComputeDriver;
 use mail::Mailer;
 
 /// Anything that can stop the control plane starting or running.
@@ -41,6 +43,14 @@ pub enum Error {
     /// `CRONCAVE_ENV` is not one we know.
     #[error("invalid CRONCAVE_ENV value {0:?}: expected local, ci, staging or production")]
     InvalidEnvironment(String),
+
+    /// `CRONCAVE_COMPUTE_DRIVER` names a driver we don't have.
+    #[error("unknown CRONCAVE_COMPUTE_DRIVER value {0:?}: expected fake or local")]
+    UnknownComputeDriver(String),
+
+    /// The compute provider could not be reached at startup.
+    #[error("could not reach the compute provider")]
+    Compute(#[from] croncave_compute::Error),
 
     /// The database could not be reached, or its schema could not be applied.
     #[error(transparent)]
@@ -69,17 +79,25 @@ pub struct State {
     /// Whether the session cookie is marked `Secure`. False only where there
     /// is no certificate, which is local development.
     pub secure_cookies: bool,
+    /// Where workspaces' computers come from.
+    pub compute: Arc<dyn ComputeDriver>,
 }
 
 impl State {
-    /// Build the state from a configuration and an open pool.
+    /// Build the state from a configuration, an open pool and a driver.
     #[must_use]
-    pub fn new(pool: Pool, mailer: Arc<dyn Mailer>, config: &Config) -> Self {
+    pub fn new(
+        pool: Pool,
+        mailer: Arc<dyn Mailer>,
+        compute: Arc<dyn ComputeDriver>,
+        config: &Config,
+    ) -> Self {
         Self {
             pool,
             mailer,
             app_url: config.app_url.clone(),
             secure_cookies: config.environment.is_deployed(),
+            compute,
         }
     }
 }
@@ -100,6 +118,8 @@ pub fn router(state: State) -> Router {
             get(workspaces::list).post(workspaces::create),
         )
         .route("/workspaces/{id}", get(workspaces::get))
+        .route("/workspaces/{id}/start", post(workspaces::start))
+        .route("/workspaces/{id}/stop", post(workspaces::stop))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }
@@ -123,7 +143,14 @@ pub async fn serve(config: Config) -> Result<(), Error> {
 
     let mailer = mail::for_environment(config.environment);
     tracing::info!(?mailer, "sign-in links will be delivered this way");
-    let state = State::new(pool.clone(), mailer, &config);
+
+    let compute = compute_driver(config.compute_driver).await?;
+    tracing::info!(
+        driver = compute.name(),
+        "workspaces' computers come from here"
+    );
+
+    let state = State::new(pool.clone(), mailer, compute, &config);
 
     let listener = tokio::net::TcpListener::bind(config.bind)
         .await
@@ -178,3 +205,18 @@ async fn shutdown_signal() {
 
 /// How long a readiness check waits on the database before calling it down.
 const READY_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Connect to the chosen compute provider.
+///
+/// Done at startup rather than per request, so a machine with no Docker finds
+/// out immediately instead of when someone first presses start.
+async fn compute_driver(
+    choice: config::ComputeDriverChoice,
+) -> Result<Arc<dyn ComputeDriver>, Error> {
+    Ok(match choice {
+        config::ComputeDriverChoice::Fake => Arc::new(croncave_compute::fake::FakeDriver::new()),
+        config::ComputeDriverChoice::Local => {
+            Arc::new(croncave_compute::local::LocalDriver::connect().await?)
+        }
+    })
+}

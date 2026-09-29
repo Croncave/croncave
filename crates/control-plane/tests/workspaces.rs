@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
+use croncave_compute::fake::FakeDriver;
 use croncave_control_plane::auth::COOKIE_NAME;
 use croncave_control_plane::mail::TestMailer;
 use croncave_control_plane::{State, router};
@@ -15,14 +16,23 @@ use serde_json::{Value, json};
 use tower::ServiceExt as _;
 
 fn app(pool: Pool) -> (axum::Router, TestMailer) {
+    let (router, mailer, _) = app_with_compute(pool);
+    (router, mailer)
+}
+
+/// The app, plus the compute provider behind it, for tests that need to
+/// interfere with the provider.
+fn app_with_compute(pool: Pool) -> (axum::Router, TestMailer, FakeDriver) {
     let mailer = TestMailer::default();
+    let compute = FakeDriver::new();
     let state = State {
         pool,
         mailer: Arc::new(mailer.clone()),
         app_url: "http://localhost:5173".to_owned(),
         secure_cookies: false,
+        compute: Arc::new(compute.clone()),
     };
-    (router(state), mailer)
+    (router(state), mailer, compute)
 }
 
 /// Sign someone in and return their session cookie.
@@ -301,4 +311,195 @@ async fn a_signed_out_session_stops_working_at_once(pool: Pool) {
 
     let (status, _) = send(&app, "GET", "/workspaces", Some(&cookie), None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_workspace_starts_and_stops(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool);
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    assert_eq!(
+        compute.count(),
+        0,
+        "a workspace is a record until it is run"
+    );
+
+    let (status, body) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["state"], "awake");
+    assert_eq!(compute.count(), 1, "one computer, made on first start");
+
+    let (status, body) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/stop"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["state"], "asleep");
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn starting_twice_makes_one_computer(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool);
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    for _ in 0..3 {
+        let (status, _) = send(
+            &app,
+            "POST",
+            &format!("/workspaces/{id}/start"),
+            Some(&cookie),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    assert_eq!(
+        compute.count(),
+        1,
+        "pressing start again must not leave computers behind"
+    );
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_computer_removed_behind_our_back_is_reported_honestly(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool);
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+
+    // Something outside Croncave removes it.
+    compute.destroy_all();
+
+    let (status, body) = send(
+        &app,
+        "GET",
+        &format!("/workspaces/{id}"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["state"], "asleep",
+        "reporting a stale awake would be a lie someone acts on"
+    );
+
+    // And starting it again just works, rather than failing for ever on a
+    // pointer to something that no longer exists.
+    let (status, body) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["state"], "awake");
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn one_team_cannot_start_another_teams_workspace(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool);
+
+    let founder = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&founder),
+        Some(json!({ "name": "Private Plans" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    let stranger = sign_in(&app, &mailer, "stranger@example.com").await;
+    let (status, _) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&stranger),
+        None,
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(compute.count(), 0, "and nothing was made for them");
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_provider_having_a_bad_day_is_reported_as_such(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool);
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    compute.break_it();
+
+    let (status, _) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+
+    // Not a 500: the request was fine, the provider is the problem, and the
+    // difference is what tells someone whether to retry or to look at Docker.
+    assert_eq!(status, StatusCode::BAD_GATEWAY);
 }

@@ -15,6 +15,7 @@ async-trait = "0.1"
 axum.workspace = true
 axum-extra.workspace = true
 base64.workspace = true
+croncave-compute = { path = "../compute" }
 croncave-db = { path = "../db" }
 croncave-telemetry = { path = "../telemetry" }
 rand.workspace = true
@@ -39,4 +40,5 @@ workspace = true
 workspace = true
 
 [dev-dependencies]
+croncave-compute = { path = "../compute" }
 tower = { workspace = true, features = ["util"] }
