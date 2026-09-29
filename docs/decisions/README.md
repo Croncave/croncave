@@ -1,6 +1,6 @@
 # Decision log
 
-Every decision with lasting impact gets an entry here, so the reasoning survives. Add new decisions as numbered files, starting at `0023-short-title.md`, using [the template](template.md), and add a row to the table below.
+Every decision with lasting impact gets an entry here, so the reasoning survives. Add new decisions as numbered files, starting at `0024-short-title.md`, using [the template](template.md), and add a row to the table below.
 
 Decisions made during planning (2026-09-28) are summarised in this table. The full reasoning is in the three docs and in `docs/history/planning-transcript.md`.
 
@@ -28,3 +28,4 @@ Decisions made during planning (2026-09-28) are summarised in this table. The fu
 | 0020 | Postgres conventions: UUIDv7 keys, text with `CHECK` over enum types, sign-in tokens and sessions stored only as hashes, cascades along ownership but never attribution | Accepted | [0020-schema-conventions.md](0020-schema-conventions.md) |
 | 0021 | Service shape: axum with the router built apart from the server, migrations at startup, separate liveness and readiness checks, loopback by default | Accepted | [0021-service-shape.md](0021-service-shape.md) |
 | 0022 | Sign in with a one-time emailed link and no passwords; a `Mailer` seam keeps the email provider undecided; sessions are revocable rows | Accepted | [0022-sign-in-with-a-link.md](0022-sign-in-with-a-link.md) |
+| 0023 | The `ComputeDriver` interface: five idempotent operations, no provider vocabulary, one shared suite every driver must pass, computers made lazily, the provider as the truth | Accepted | [0023-compute-driver.md](0023-compute-driver.md) |
