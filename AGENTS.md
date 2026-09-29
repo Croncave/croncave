@@ -67,7 +67,7 @@ The three main docs are **snapshots** of living docs on claude.ai (links at the 
 
 ## Planned repository layout
 
-Nothing below exists yet. Create each part only when its build step starts (see [docs/delivery.md](docs/delivery.md)).
+Only `crates/telemetry` exists so far. Create each other part when its build step starts (see [docs/delivery.md](docs/delivery.md)).
 
 ```
 crates/            Rust (one Cargo workspace)
@@ -77,6 +77,7 @@ crates/            Rust (one Cargo workspace)
   relay/
   ai-gateway/
   agent/           static binary that runs inside workspaces
+  telemetry/       structured logging and error reporting, shared by every service
   db/              Postgres migrations
 web/               SvelteKit app, including the view component library
 images/            workspace base images (agent + Claude Code + common tools)

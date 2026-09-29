@@ -23,6 +23,7 @@ crates/            Rust (one Cargo workspace)
   relay/
   ai-gateway/
   agent/           static binary that runs inside workspaces
+  telemetry/       structured logging and error reporting, shared by every service
   db/              Postgres migrations
 web/               SvelteKit app, including the view component library
 images/            workspace base images (agent + Claude Code + common tools)
