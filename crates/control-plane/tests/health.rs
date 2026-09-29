@@ -7,6 +7,7 @@
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use croncave_compute::fake::FakeDriver;
 use croncave_control_plane::mail::TestMailer;
 use croncave_control_plane::{State, router};
 use croncave_db::Pool;
@@ -20,6 +21,7 @@ fn state(pool: Pool) -> State {
         mailer: Arc::new(TestMailer::default()),
         app_url: "http://localhost:5173".to_owned(),
         secure_cookies: false,
+        compute: Arc::new(FakeDriver::new()),
     }
 }
 
