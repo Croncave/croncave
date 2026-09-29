@@ -1,0 +1,58 @@
+/*
+ * The design system, imported from docs/design/system rather than copied.
+ *
+ * That folder is a snapshot of the design canvas and gets re-exported, so a
+ * copy here would be a second source of truth that quietly falls behind.
+ * Vite is told to read above the project root for exactly these two files
+ * (see vite.config.ts).
+ */
+@import '../../docs/design/system/tokens.css';
+@import '../../docs/design/system/components.css';
+
+/* Self-hosted, so the app makes no third-party request to render text and
+   works offline. The weights are the ones the design uses. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+html {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+/*
+ * A link that looks like a button should not be underlined. The design
+ * system's .cc-btn sets no text-decoration, and every button in the canvas is
+ * a real <button>, so this only shows up where we use an <a>. Worth fixing in
+ * components.css upstream.
+ */
+a.cc-btn,
+a.cc-icon-btn,
+a.cc-nav-item {
+  text-decoration: none;
+}
+
+/* The design system asks for a visible 2px ring on everything focusable. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
