@@ -1,0 +1,83 @@
+name: CI
+
+# Jobs switch on automatically as each part of the repository appears:
+# the Rust job once a root Cargo.toml exists, the web job once web/package.json exists.
+# Until then only the repository checks run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Detect project parts
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.parts.outputs.rust }}
+      web: ${{ steps.parts.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: parts
+        run: |
+          [ -f Cargo.toml ] && echo "rust=true" >> "$GITHUB_OUTPUT" || echo "rust=false" >> "$GITHUB_OUTPUT"
+          [ -f web/package.json ] && echo "web=true" >> "$GITHUB_OUTPUT" || echo "web=false" >> "$GITHUB_OUTPUT"
+
+  repo:
+    name: Repository checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required context files exist
+        run: |
+          for f in AGENTS.md CLAUDE.md README.md docs/product-definition.md docs/architecture.md docs/pricing.md docs/delivery.md docs/decisions/README.md; do
+            test -f "$f" || { echo "Missing $f"; exit 1; }
+          done
+      - name: No committed secrets or env files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then
+            echo "Env files must not be committed (use .env.example for templates)."; exit 1
+          fi
+
+  rust:
+    name: Rust
+    needs: detect
+    if: needs.detect.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  web:
+    name: Web
+    needs: detect
+    if: needs.detect.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --if-present lint
+      - run: pnpm run --if-present check
+      - run: pnpm run --if-present test

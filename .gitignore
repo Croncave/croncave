@@ -1,0 +1,29 @@
+# Rust
+/target/
+**/target/
+
+# Node / SvelteKit
+node_modules/
+.svelte-kit/
+/web/build/
+.pnpm-store/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Test output
+/e2e/test-results/
+/e2e/playwright-report/
+coverage/
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json
