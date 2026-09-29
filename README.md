@@ -6,13 +6,15 @@ A private computer in the cloud that keeps working after you close your laptop. 
 
 ## Getting started
 
-Prerequisites: a stable Rust toolchain (`rustup`). Node and pnpm join the list
-when the web app lands.
+Prerequisites: a stable Rust toolchain (`rustup`) and Node 22 or newer.
 
 ```
+corepack enable pnpm     # once per machine; pins the pnpm version
 cp .env.example .env     # local settings; git-ignored, never committed
 ./scripts/check.sh       # everything CI runs
 ```
+
+To run the web app: `cd web && pnpm dev`.
 
 `.env.example` lists every variable the code reads, with a comment on each.
 Add a variable there whenever you add one to the code.

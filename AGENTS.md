@@ -67,7 +67,7 @@ The three main docs are **snapshots** of living docs on claude.ai (links at the 
 
 ## Planned repository layout
 
-Only `crates/telemetry` exists so far. Create each other part when its build step starts (see [docs/delivery.md](docs/delivery.md)).
+Only `crates/telemetry` and `web/` exist so far. Create each other part when its build step starts (see [docs/delivery.md](docs/delivery.md)).
 
 ```
 crates/            Rust (one Cargo workspace)
