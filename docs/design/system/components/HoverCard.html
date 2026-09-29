@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HoverCard · Croncave design system</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<style>body{margin:0;background:#888;font-family:Inter,system-ui,sans-serif} .theme{max-width:960px;margin:0 auto 24px} h2{font:500 12px/16px ui-monospace,monospace;color:#fff;margin:16px auto 8px;max-width:960px;text-transform:uppercase;letter-spacing:.08em}</style>
+</head>
+<body>
+<h2>Light</h2>
+<div class="theme" data-theme="light" style="background:var(--bg)">
+<div class="cc-root cc-dotgrid" style="padding:24px;">
+  <div class="cc-peek" role="dialog" aria-label="Quick stats for Daily News Digest">
+    <div style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Task" style="flex:none;color:var(--ink-subtle);"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg><span style="flex-grow:1;font:600 15px/22px var(--font-sans);">Daily News Digest</span><span class="cc-pill cc-pill--done">Done</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+      <div class="cc-stat"><span class="cc-label">Took</span><span class="cc-stat__value">1m 42s</span></div>
+      <div class="cc-stat"><span class="cc-label">Cost</span><span class="cc-stat__value">$0.03</span></div>
+      <div class="cc-stat"><span class="cc-label">Runs</span><span class="cc-stat__value">14 / 14</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;font:400 12px/16px var(--font-sans);color:var(--ink-muted);"><span>Cost per run, last 14 days</span><span style="font-family:var(--font-mono);color:var(--ink-subtle);">max $0.05</span></div>
+      <div class="cc-spark" role="img" aria-label="Cost per run over the last 14 days, latest $0.03"><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:22px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:45px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:22px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:56px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:22px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar cc-spark__bar--latest" style="height:34px;"></div></div>
+      <div style="display:flex;justify-content:space-between;font:400 11px/16px var(--font-mono);color:var(--ink-subtle);"><span>14d ago</span><span>today</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font:400 13px/18px var(--font-sans);"><span style="color:var(--ink-muted);">Next run tomorrow 08:00</span><a href="#" style="color:var(--ink);font-weight:500;text-decoration:none;">Details →</a></div>
+  </div>
+</div>
+</div>
+<h2>Dark</h2>
+<div class="theme" data-theme="dark" style="background:var(--bg)">
+<div class="cc-root cc-dotgrid" style="padding:24px;">
+  <div class="cc-peek" role="dialog" aria-label="Quick stats for Daily News Digest">
+    <div style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Task" style="flex:none;color:var(--ink-subtle);"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg><span style="flex-grow:1;font:600 15px/22px var(--font-sans);">Daily News Digest</span><span class="cc-pill cc-pill--done">Done</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+      <div class="cc-stat"><span class="cc-label">Took</span><span class="cc-stat__value">1m 42s</span></div>
+      <div class="cc-stat"><span class="cc-label">Cost</span><span class="cc-stat__value">$0.03</span></div>
+      <div class="cc-stat"><span class="cc-label">Runs</span><span class="cc-stat__value">14 / 14</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;font:400 12px/16px var(--font-sans);color:var(--ink-muted);"><span>Cost per run, last 14 days</span><span style="font-family:var(--font-mono);color:var(--ink-subtle);">max $0.05</span></div>
+      <div class="cc-spark" role="img" aria-label="Cost per run over the last 14 days, latest $0.03"><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:22px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:45px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:22px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:56px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar" style="height:22px;"></div><div class="cc-spark__bar" style="height:34px;"></div><div class="cc-spark__bar cc-spark__bar--latest" style="height:34px;"></div></div>
+      <div style="display:flex;justify-content:space-between;font:400 11px/16px var(--font-mono);color:var(--ink-subtle);"><span>14d ago</span><span>today</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font:400 13px/18px var(--font-sans);"><span style="color:var(--ink-muted);">Next run tomorrow 08:00</span><a href="#" style="color:var(--ink);font-weight:500;text-decoration:none;">Details →</a></div>
+  </div>
+</div>
+</div>
+</body>
+</html>

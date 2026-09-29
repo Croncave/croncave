@@ -13,7 +13,9 @@ Separate repositories only where something is published for others:
 
 ## Planned layout
 
-Create each part only when its build step starts.
+**This file owns the layout and the build order.** `AGENTS.md` summarises both and links here; neither is copied, because the two copies we used to keep had already drifted apart.
+
+`crates/telemetry` and `web/` exist. Create each other part when its build step starts.
 
 ```
 crates/            Rust (one Cargo workspace)
@@ -75,21 +77,26 @@ One shared test suite runs against every driver. A new driver (for example our o
 
 Secrets for staging and production live in GitHub Actions secrets and the provider's secret store. They are never committed.
 
-## Milestone checkpoints
+## Build order and milestone checkpoints
 
-Each step has a check that proves it works before moving on.
+Each step ends with a check that proves it works before the next one starts, and each is delivered in slices small enough to review in one sitting — step 0 took five.
+
+This follows the build order in `docs/architecture.md`, with a step 0 added because the repository needed a setup step that list doesn't cover.
 
 | Step | Proven when |
 | --- | --- |
-| 0. Repo and CI | CI runs green, with logging and error tracking wired in |
-| 1. Agent + relay, locally | A browser terminal works on a local workspace |
-| 2. Fly driver | The same test passes on real Fly in staging, and the driver suite passes |
-| 3. Sleep, wake and the scheduler | A scheduled run wakes, runs and sleeps again, and wake time is measured |
+| 0. Repo and CI ✅ | CI runs green, with logging and error tracking wired in |
+| 1. Accounts and workspaces | A person signs in, and a user, a personal team and a workspace record exist and show in the app |
+| 2. Workspace compute | The shared driver suite passes on fake and local (Docker) in CI, the same suite passes against real Fly in staging, and a workspace sleeps on idle |
+| 3. Connection | A browser terminal works on a local (Docker) workspace. This is the first real milestone: a cloud computer reachable only through Croncave |
 | 4. Claude Code sessions | A session keeps running after the browser closes, and caps stop it |
 | 5. GitHub and change review | A session opens a pull request, and the review screen shows it |
-| 6. Home, timeline, email | "Needs you," "running" and "done" reflect real events |
-| 7. Previews | An app on localhost opens in the app from the preview domain |
-| 8. Hardening | Security and abuse tests pass. Then the alpha goes live on the real domain |
+| 6. Scheduled runs | A scheduled run wakes a workspace, runs, records the result and lets it sleep, and wake time is measured |
+| 7. Home and timeline | "Needs you," "running" and "done" reflect real events, with usage and spending caps |
+| 8. Previews, templates and dashboards | An app on localhost opens in the app from the preview domain, a template creates a working task, and a workspace shows a dashboard built from standard components |
+| 9. Hardening | Security and abuse tests pass. Then the alpha goes live on the real domain |
+
+Two notes on the checkpoints. **Step 2's is two-part on purpose** — local proven in CI, Fly proven in staging — so progress on the driver interface isn't blocked on confirming Fly's terms. **Step 8 covers three R1 "Must" features**, not just previews; templates and the first dashboard components belong there too.
 
 ## Before launch
 

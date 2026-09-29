@@ -21,7 +21,7 @@ Step 0 creates the repository skeleton every later step builds on. Three things 
 
 - **A crate per service with its own logging setup:** no new crate in the layout, but the setup would be copied four times and drift, and a change to the log shape would touch every service.
 - **Put the setup in `crates/protocol`:** protocol is agent ↔ relay message types; mixing process-wide setup into it would make a dependency-free types crate depend on a subscriber stack.
-- **A Makefile, `just`, or `cargo-xtask` as the runner:** all fine, but each is either an extra install (`just`, `mise`), quirky syntax (Make), or a crate that recompiles for a one-line change (xtask). A shell script needs nothing and is easy to extend when step 1 adds services to start.
+- **A Makefile, `just`, or `cargo-xtask` as the runner:** all fine, but each is either an extra install (`just`, `mise`), quirky syntax (Make), or a crate that recompiles for a one-line change (xtask). A shell script needs nothing and is easy to extend when later steps add services to start.
 - **Separate local and CI command lists:** rejected for the drift described above.
 
 ## Consequences

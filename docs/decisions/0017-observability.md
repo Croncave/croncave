@@ -30,7 +30,7 @@ Two constraints shaped the answer. Contributors and CI must not need an account 
 - The `SENTRY_DSN` for staging and production goes in each environment's secret store, never in the repository.
 - Because `SENTRY_DSN` is read at startup, an invalid DSN stops the service rather than silently disabling reporting. The same applies to `CRONCAVE_ENV` and `CRONCAVE_LOG_FORMAT`.
 - `Config`'s `Debug` implementation redacts the DSN, so dumping a configuration into a log cannot leak it.
-- Log volume is now a cost we control with `RUST_LOG` per environment. Workspace agents buffer and forward logs over the relay (see `docs/architecture.md`), and how those reach the same place is step 1's problem, not step 0's.
+- Log volume is now a cost we control with `RUST_LOG` per environment. Workspace agents buffer and forward logs over the relay (see `docs/architecture.md`), and how those reach the same place belongs to the connection step, not step 0.
 
 ## Amendment, 2026-09-29: the JavaScript SDK's collection defaults
 

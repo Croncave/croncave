@@ -7,7 +7,7 @@ This file is the shared brief for any AI coding agent working in this repository
 Croncave gives people a private computer in the cloud that keeps working after they close their laptop. It's managed entirely through a web app (no remote desktop). Users hand off overnight AI coding sessions, scheduled scripts, monitors and small apps. They come back to plain-language results, a change review, or a private preview of what was built.
 
 - **App:** `app.croncave.com` (not live yet). **Previews:** a separately registered domain, one subdomain per preview (name to be picked).
-- **Status:** build step 0 is built — Cargo workspace, SvelteKit app, logging, error reporting, CI — and awaits its first green run on GitHub. Step 1 (agent + relay) is next (see [Build order](#build-order-for-r1)).
+- **Status:** build step 0 is done and merged — Cargo workspace, SvelteKit app, structured logging, error reporting, CI green. Step 1 (accounts and workspaces) is next (see [Build order](#build-order-for-r1)).
 - **First customers:** technical founders (three are lined up for the R1 alpha). Non-technical users are the long-term goal.
 - **Region:** US only, for users, compute and data.
 
@@ -18,13 +18,22 @@ Croncave gives people a private computer in the cloud that keeps working after t
 | [docs/product-definition.md](docs/product-definition.md) | PR/FAQ, every feature as a user story with MoSCoW priority and release (R1, R2, R3, Later), decisions |
 | [docs/architecture.md](docs/architecture.md) | System design: compute, lifecycle, the outgoing connection, previews, AI access, models, scheduler, data model, security, stack, build order |
 | [docs/pricing.md](docs/pricing.md) | Tiers, usage billing, caps, free-tier guardrails |
-| [docs/delivery.md](docs/delivery.md) | Repository layout, build artifacts, environments, testing, milestone checkpoints |
+| [docs/delivery.md](docs/delivery.md) | **Owns the repository layout and the build order.** Also build artifacts, environments and testing |
 | [docs/conventions.md](docs/conventions.md) | How code is written, checked and landed |
 | [docs/decisions/](docs/decisions/) | Decision log. Add an entry for every meaningful decision |
 | [docs/design/mockups.md](docs/design/mockups.md) | Links to the UI mockups |
 | [docs/history/planning-transcript.md](docs/history/planning-transcript.md) | The full planning conversation, for the reasoning behind decisions |
 
-The three main docs are **snapshots** of living docs on claude.ai (links at the top of each). If a snapshot and the living doc disagree, the living doc wins. Ask the user to refresh the snapshot rather than guessing.
+**Know which kind of doc you are reading before you change it.**
+
+| Kind | Which | Rule |
+| --- | --- | --- |
+| **Snapshot** of a living doc on claude.ai | `product-definition.md`, `architecture.md`, `pricing.md` | Read-only here. The living doc wins if they disagree. Don't edit the snapshot to record a decision — tell the user what to change upstream |
+| **Repo-native** | `AGENTS.md`, `delivery.md`, `conventions.md`, `decisions/` | Ours. This is where decisions made while building are recorded |
+
+A decision made in code lands in a repo-native doc and the snapshots will not know about it. When that gap matters, say so and give the user the exact upstream wording.
+
+**One copy of each thing.** `delivery.md` owns the repository layout and the build order; the sections below summarise them and link there. Don't paste either back into this file — two copies is what caused them to drift apart.
 
 ## How we work (the user wants close visibility and input)
 
@@ -66,45 +75,23 @@ The three main docs are **snapshots** of living docs on claude.ai (links at the 
 - **Secrets** never go in the repo, logs or test fixtures. Use environment variables and the secrets manager of each environment.
 - **US only:** no infrastructure outside US regions.
 
-## Planned repository layout
+## Repository layout
 
-Only `crates/telemetry` and `web/` exist so far. Create each other part when its build step starts (see [docs/delivery.md](docs/delivery.md)).
+**[docs/delivery.md](docs/delivery.md) has the full layout.** Rust crates live in `crates/` as one Cargo workspace (`protocol`, `compute`, `control-plane`, `relay`, `ai-gateway`, `agent`, `telemetry`, `db`); the SvelteKit app and its view component library live in `web/`; then `images/`, `templates/`, `infra/`, `e2e/` and `docs/`.
 
-```
-crates/            Rust (one Cargo workspace)
-  protocol/        agent <-> relay messages and shared types (also generates TypeScript types)
-  compute/         ComputeDriver interface + drivers: fake, local (Docker), fly
-  control-plane/   API, scheduler, orchestrator
-  relay/
-  ai-gateway/
-  agent/           static binary that runs inside workspaces
-  telemetry/       structured logging and error reporting, shared by every service
-  db/              Postgres migrations
-web/               SvelteKit app, including the view component library
-images/            workspace base images (agent + Claude Code + common tools)
-templates/         starter templates
-infra/             deploy config per environment
-e2e/               end-to-end tests (Playwright)
-docs/              product, architecture, pricing, delivery, decisions
-```
+Only `crates/telemetry` and `web/` exist. Create each other part when its build step starts.
 
 ## Build order for R1
 
-Each step ends with a check that proves it works before moving on.
+**[docs/delivery.md](docs/delivery.md) has the table, with the check that proves each step.** It follows the build order in [docs/architecture.md](docs/architecture.md), with a step 0 added for the repository setup that list doesn't cover.
 
-| Step | Proven when |
-| --- | --- |
-| 0. Repo and CI | CI runs green; logging and error tracking are wired in |
-| 1. Agent + relay, locally | A browser terminal works on a local (Docker) workspace |
-| 2. Fly driver | The same test passes on real Fly in staging; the driver test suite passes |
-| 3. Sleep, wake, scheduler | A scheduled run wakes, runs and sleeps again; wake time is measured |
-| 4. Claude Code sessions | A session keeps running after the browser closes; caps stop it |
-| 5. GitHub and change review | A session opens a pull request; the review screen shows it |
-| 6. Home, timeline, email | "Needs you," "running" and "done" reflect real events |
-| 7. Previews | An app on localhost opens in the app from the preview domain |
-| 8. Hardening | Security and abuse tests pass; then the alpha opens on the real domain |
+**0** Repo and CI ✅ · **1** Accounts and workspaces · **2** Workspace compute · **3** Connection · **4** Claude Code sessions · **5** GitHub and change review · **6** Scheduled runs · **7** Home and timeline · **8** Previews, templates and dashboards · **9** Hardening
+
+**Step 1 is next.** Each step is delivered in slices small enough to review in one sitting — step 0 took five.
 
 ## Testing and environments
+
+**[docs/delivery.md](docs/delivery.md) has the detail.** In brief:
 
 - **Local:** one command starts Postgres, MinIO, the server, the web app and workspaces through the local (Docker) driver. A fake Claude Code tests sessions without spending tokens.
 - **CI** (GitHub Actions, `.github/workflows/ci.yml`): unit tests, protocol tests, the shared driver test suite (fake + local), Playwright end-to-end tests, and security tests (a workspace can't be reached from outside; egress rules hold). CI jobs switch on automatically as each part of the repo appears.

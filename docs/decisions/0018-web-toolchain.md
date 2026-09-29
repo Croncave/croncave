@@ -5,7 +5,7 @@
 
 ## Context
 
-`docs/architecture.md` already chose TypeScript and SvelteKit for the web app, and the view component library lives there too. Step 0 has to turn that into a skeleton that builds, lints and tests, so the CI web job can switch on and step 1 has somewhere to put a browser terminal. The details left open were the adapter, the package manager, how strict the TypeScript settings are, and where the app reads its settings from.
+`docs/architecture.md` already chose TypeScript and SvelteKit for the web app, and the view component library lives there too. Step 0 has to turn that into a skeleton that builds, lints and tests, so the CI web job can switch on and the connection step has somewhere to put a browser terminal. The details left open were the adapter, the package manager, how strict the TypeScript settings are, and where the app reads its settings from.
 
 ## Decision
 
@@ -30,5 +30,5 @@
 
 - `corepack enable pnpm` is a one-time step on a new machine, and belongs in the README.
 - The whole web toolchain is pinned in one lockfile, committed, and CI installs with `--frozen-lockfile`, so a dependency cannot change under us without a visible diff.
-- Two definitions of the environment names now exist, in Rust and TypeScript. They are small and tested on both sides; if more shared types appear (they will, with the protocol crate in step 1), generating the TypeScript from Rust is the answer rather than a third hand-written copy.
+- Two definitions of the environment names now exist, in Rust and TypeScript. They are small and tested on both sides; if more shared types appear (they will, with the protocol crate in the connection step), generating the TypeScript from Rust is the answer rather than a third hand-written copy.
 - Upgrading TypeScript is now gated on SvelteKit's peer range, which is worth rechecking when either moves.
