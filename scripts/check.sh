@@ -5,6 +5,7 @@
 #   scripts/check.sh          everything that exists in the repository
 #   scripts/check.sh rust     the Rust workspace only
 #   scripts/check.sh web      the web app only
+#   scripts/check.sh e2e      the end-to-end tests only
 #
 # Parts that don't exist yet are skipped, so this stays usable as the
 # repository grows (see the build order in AGENTS.md).
@@ -16,9 +17,9 @@ cd "$repo_root"
 
 target="${1:-all}"
 case "$target" in
-  all | rust | web) ;;
+  all | rust | web | e2e) ;;
   *)
-    echo "usage: scripts/check.sh [all|rust|web]" >&2
+    echo "usage: scripts/check.sh [all|rust|web|e2e]" >&2
     exit 2
     ;;
 esac
@@ -26,15 +27,15 @@ esac
 say() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 skip() { printf '\n--- skipped: %s\n' "$1"; }
 
-check_rust() {
-  # Take DATABASE_URL from .env when the shell doesn't already have one, so
-  # `./scripts/check.sh` works straight after `cp .env.example .env`. An
-  # exported value always wins, which is how CI sets it.
-  if [ -z "${DATABASE_URL:-}" ] && [ -f .env ]; then
-    DATABASE_URL="$(sed -n 's/^DATABASE_URL=//p' .env | tail -1)"
-    export DATABASE_URL
-  fi
+# Take DATABASE_URL from .env when the shell doesn't already have one, so
+# `./scripts/check.sh` works straight after `cp .env.example .env`. An
+# exported value always wins, which is how CI sets it.
+if [ -z "${DATABASE_URL:-}" ] && [ -f .env ]; then
+  DATABASE_URL="$(sed -n 's/^DATABASE_URL=//p' .env | tail -1)"
+  export DATABASE_URL
+fi
 
+check_rust() {
   if [ ! -f Cargo.toml ]; then
     skip "no Cargo.toml yet"
     return
@@ -99,13 +100,55 @@ check_web() {
   (cd web && pnpm run --if-present check:assets)
 }
 
+check_e2e() {
+  if [ ! -f e2e/package.json ]; then
+    skip "no e2e/package.json yet"
+    return
+  fi
+
+  if ! command -v pnpm >/dev/null 2>&1; then
+    echo "pnpm is not available. Run: corepack enable pnpm" >&2
+    exit 1
+  fi
+
+  if [ ! -d e2e/node_modules ]; then
+    say "pnpm install (e2e)"
+    (cd e2e && pnpm install)
+  fi
+
+  # The end-to-end tests drive a real browser against a real control plane and
+  # a real Postgres. Skip them loudly when either is missing, the same way the
+  # database tests do; in CI a skip is a failure.
+  if [ -z "${DATABASE_URL:-}" ]; then
+    skip "end-to-end tests: no DATABASE_URL"
+    [ -n "${CI:-}" ] && { echo "but this is CI, where they must run." >&2; exit 1; }
+    return
+  fi
+
+  if ! (cd e2e && pnpm exec playwright install --dry-run chromium >/dev/null 2>&1); then
+    skip "end-to-end tests: no browser. Run: cd e2e && pnpm run install-browsers"
+    [ -n "${CI:-}" ] && { echo "but this is CI, where they must run." >&2; exit 1; }
+    return
+  fi
+
+  # They drive the built binary, not cargo run, so a stale one would test the
+  # wrong code.
+  say "cargo build (for the end-to-end tests)"
+  cargo build -p croncave-control-plane
+
+  say "playwright"
+  (cd e2e && pnpm run test)
+}
+
 case "$target" in
   all)
     check_rust
     check_web
+    check_e2e
     ;;
   rust) check_rust ;;
   web) check_web ;;
+  e2e) check_e2e ;;
 esac
 
 printf '\n\033[1m==> all checks passed\033[0m\n'

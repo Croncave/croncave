@@ -7,7 +7,7 @@ This file is the shared brief for any AI coding agent working in this repository
 Croncave gives people a private computer in the cloud that keeps working after they close their laptop. It's managed entirely through a web app (no remote desktop). Users hand off overnight AI coding sessions, scheduled scripts, monitors and small apps. They come back to plain-language results, a change review, or a private preview of what was built.
 
 - **App:** `app.croncave.com` (not live yet). **Previews:** a separately registered domain, one subdomain per preview (name to be picked).
-- **Status:** build step 0 is done and merged — Cargo workspace, SvelteKit app, structured logging, error reporting, CI green. Step 1 (accounts and workspaces) is next (see [Build order](#build-order-for-r1)).
+- **Status:** step 1 (accounts and workspaces) is built — sign-in by emailed link, a personal team, workspace records, the app shell — and awaits its first green CI run. Step 2 (workspace compute) is next (see [Build order](#build-order-for-r1)).
 - **First customers:** technical founders (three are lined up for the R1 alpha). Non-technical users are the long-term goal.
 - **Region:** US only, for users, compute and data.
 
@@ -87,7 +87,7 @@ Only `crates/telemetry` and `web/` exist. Create each other part when its build 
 
 **0** Repo and CI ✅ · **1** Accounts and workspaces · **2** Workspace compute · **3** Connection · **4** Claude Code sessions · **5** GitHub and change review · **6** Scheduled runs · **7** Home and timeline · **8** Previews, templates and dashboards · **9** Hardening
 
-**Step 1 is next.** Each step is delivered in slices small enough to review in one sitting — step 0 took five.
+**Step 2 is next.** Each step is delivered in slices small enough to review in one sitting — step 0 took five, step 1 took eight.
 
 ## Testing and environments
 

@@ -60,6 +60,14 @@ cp .env.example .env     # once per clone
 
 **Queries are runtime-checked (`sqlx::query`), not the `query!` macros.** The macros check SQL against a live schema at compile time, which is genuinely valuable, but it means `cargo build` needs either a running database or an `.sqlx` cache that someone has to remember to regenerate. Step 0 deliberately made the checks runnable without services, and that is worth more. The tests cover the queries against a real Postgres instead.
 
+## Tests
+
+- **Unit and integration tests live with their crate**; the database ones run against a real Postgres through `#[sqlx::test]`, which gives each test its own database.
+- **End-to-end tests live in `e2e/`**, not in `web/`. They drive a real browser against a real control plane against a real Postgres, so they belong to the whole system rather than to the web app.
+- **Never add a test-only endpoint to production code.** The end-to-end tests read a sign-in link from the control plane's log, the way a developer does, because only the token's hash is stored and there is deliberately no way to read one back. A convenience endpoint would be a bypass living in the shipped binary.
+- **Give each end-to-end test its own account** (`freshEmail()`), so runs never collide with each other or with whatever is already in the database.
+- **A test that cannot fail is not a test.** When a test guards something that matters, break the thing once and watch that test — and ideally only that test — go red.
+
 ## Database migrations
 
 Migrations will live in `crates/db` (created in the accounts and workspaces step) and run before each deploy. **Old and new code must both work while a rollout is in progress:** expand first (add the column, backfill, start writing to it), then contract in a later release (stop reading the old column, drop it). Never rename or drop in the same release that stops using something.
