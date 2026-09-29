@@ -1,7 +1,10 @@
 //! How a service decides what to log and where it is running.
 
+use std::fmt;
 use std::io::IsTerminal;
 use std::str::FromStr;
+
+use sentry::types::Dsn;
 
 use crate::Error;
 
@@ -11,6 +14,9 @@ pub const ENV_FILTER: &str = "RUST_LOG";
 pub const ENV_ENVIRONMENT: &str = "CRONCAVE_ENV";
 /// Environment variable choosing the log format.
 pub const ENV_LOG_FORMAT: &str = "CRONCAVE_LOG_FORMAT";
+/// Environment variable holding the Sentry DSN. Unset means error reporting
+/// is off, which is how local runs and CI work.
+pub const ENV_SENTRY_DSN: &str = "SENTRY_DSN";
 
 /// The default filter when `RUST_LOG` is unset.
 pub const DEFAULT_FILTER: &str = "info";
@@ -109,7 +115,10 @@ impl FromStr for LogFormat {
 }
 
 /// Everything [`crate::init`] needs to set a service's telemetry up.
-#[derive(Clone, Debug)]
+///
+/// Its [`fmt::Debug`] never prints the DSN, so dumping a configuration into a
+/// log can't leak it.
+#[derive(Clone)]
 pub struct Config {
     /// The service's name, e.g. `control-plane`. Recorded on every JSON event.
     pub service: String,
@@ -121,6 +130,28 @@ pub struct Config {
     pub log_format: LogFormat,
     /// The `tracing` filter, in `RUST_LOG` syntax.
     pub filter: String,
+    /// Where errors are reported. `None` turns error reporting off.
+    pub sentry_dsn: Option<Dsn>,
+}
+
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("service", &self.service)
+            .field("version", &self.version)
+            .field("environment", &self.environment)
+            .field("log_format", &self.log_format)
+            .field("filter", &self.filter)
+            .field(
+                "sentry_dsn",
+                &if self.sentry_dsn.is_some() {
+                    "<set>"
+                } else {
+                    "<unset>"
+                },
+            )
+            .finish()
+    }
 }
 
 impl Config {
@@ -135,6 +166,7 @@ impl Config {
             environment: Environment::default(),
             log_format: LogFormat::default(),
             filter: DEFAULT_FILTER.to_owned(),
+            sentry_dsn: None,
         }
     }
 
@@ -142,9 +174,10 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// Returns an error if `CRONCAVE_ENV` or `CRONCAVE_LOG_FORMAT` holds a
-    /// value we don't recognise. A typo in a deployment's configuration should
-    /// stop the service, not silently make it look like a local run.
+    /// Returns an error if `CRONCAVE_ENV`, `CRONCAVE_LOG_FORMAT` or
+    /// `SENTRY_DSN` holds a value we don't recognise. A typo in a deployment's
+    /// configuration should stop the service, not silently make it look like a
+    /// local run or quietly drop every error report.
     pub fn from_env(service: impl Into<String>, version: impl Into<String>) -> Result<Self, Error> {
         Self::from_vars(
             service,
@@ -173,6 +206,10 @@ impl Config {
         let filter = var(ENV_FILTER)
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| DEFAULT_FILTER.to_owned());
+        let sentry_dsn = match var(ENV_SENTRY_DSN) {
+            Some(value) if !value.trim().is_empty() => Some(value.trim().parse()?),
+            _ => None,
+        };
 
         Ok(Self {
             service: service.into(),
@@ -180,6 +217,7 @@ impl Config {
             environment,
             log_format,
             filter,
+            sentry_dsn,
         })
     }
 
@@ -204,11 +242,18 @@ impl Config {
         self.filter = filter.into();
         self
     }
+
+    /// Override where errors are reported.
+    #[must_use]
+    pub fn with_sentry_dsn(mut self, dsn: impl Into<Option<Dsn>>) -> Self {
+        self.sentry_dsn = dsn.into();
+        self
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used, clippy::unwrap_used)]
 
     use super::*;
 
@@ -266,6 +311,10 @@ mod tests {
         assert_eq!(config.environment, Environment::Local);
         assert_eq!(config.log_format, LogFormat::Json);
         assert_eq!(config.filter, DEFAULT_FILTER);
+        assert!(
+            config.sentry_dsn.is_none(),
+            "error reporting is off unless a DSN is set"
+        );
     }
 
     #[test]
@@ -286,6 +335,56 @@ mod tests {
         assert!(config.environment.is_deployed());
         assert_eq!(config.log_format, LogFormat::Pretty);
         assert_eq!(config.filter, "warn,croncave_relay=debug");
+    }
+
+    #[test]
+    fn a_sentry_dsn_is_read_from_the_environment() {
+        let config = Config::from_vars(
+            "relay",
+            "0.1.0",
+            vars(&[(ENV_SENTRY_DSN, "https://key@o1.ingest.sentry.io/42")]),
+            || false,
+        )
+        .unwrap();
+
+        let dsn = config.sentry_dsn.expect("a DSN was set");
+        assert_eq!(dsn.project_id().value(), "42");
+    }
+
+    #[test]
+    fn a_blank_sentry_dsn_means_no_error_reporting() {
+        let config =
+            Config::from_vars("relay", "0.1.0", vars(&[(ENV_SENTRY_DSN, "  ")]), || false).unwrap();
+
+        assert!(config.sentry_dsn.is_none());
+    }
+
+    #[test]
+    fn an_invalid_sentry_dsn_is_rejected() {
+        let error = Config::from_vars(
+            "relay",
+            "0.1.0",
+            vars(&[(ENV_SENTRY_DSN, "not-a-dsn")]),
+            || false,
+        )
+        .unwrap_err();
+
+        assert!(matches!(error, Error::InvalidDsn(_)), "{error}");
+    }
+
+    #[test]
+    fn debugging_a_config_never_prints_the_dsn() {
+        let config = Config::from_vars(
+            "relay",
+            "0.1.0",
+            vars(&[(ENV_SENTRY_DSN, "https://sup3rsecret@o1.ingest.sentry.io/42")]),
+            || false,
+        )
+        .unwrap();
+
+        let printed = format!("{config:?}");
+        assert!(!printed.contains("sup3rsecret"), "{printed}");
+        assert!(printed.contains("<set>"), "{printed}");
     }
 
     #[test]

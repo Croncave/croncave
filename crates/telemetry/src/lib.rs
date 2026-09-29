@@ -16,6 +16,11 @@
 //! environment. In pretty mode (a developer's terminal) they are written once,
 //! in the startup line, rather than repeated on every line.
 //!
+//! Error reporting is on only when `SENTRY_DSN` is set, so local runs and CI
+//! need no account and no secret. When it is set, every `tracing::error!`
+//! becomes a Sentry event, lower-level events become breadcrumbs on it, and
+//! panics are reported too.
+//!
 //! **Never log a secret.** Tokens, API keys, GitHub credentials and workspace
 //! credentials must not appear in a field or a message. See
 //! `docs/conventions.md`.
@@ -46,17 +51,37 @@ pub enum Error {
     #[error("invalid RUST_LOG filter")]
     InvalidFilter(#[from] tracing_subscriber::filter::ParseError),
 
+    /// `SENTRY_DSN` was set but is not a DSN.
+    #[error("invalid SENTRY_DSN")]
+    InvalidDsn(#[from] sentry::types::ParseDsnError),
+
     /// [`init`] was called twice, or something else installed a subscriber.
     #[error("a global tracing subscriber is already installed")]
     AlreadyInitialised(#[source] tracing::subscriber::SetGlobalDefaultError),
 }
 
 /// Held for the lifetime of the process. Dropping it flushes anything
-/// buffered, so keep it alive until the service exits.
+/// buffered, including error reports still in flight, so keep it alive until
+/// the service exits.
 #[must_use = "telemetry is torn down when the guard is dropped"]
-#[derive(Debug)]
 pub struct Guard {
-    _private: (),
+    sentry: Option<sentry::ClientInitGuard>,
+}
+
+impl Guard {
+    /// Whether errors are being reported. False when no DSN was configured.
+    #[must_use]
+    pub fn reports_errors(&self) -> bool {
+        self.sentry.as_ref().is_some_and(|guard| guard.is_enabled())
+    }
+}
+
+impl std::fmt::Debug for Guard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Guard")
+            .field("reports_errors", &self.reports_errors())
+            .finish()
+    }
 }
 
 /// Install logging for this process and announce that the service is starting.
@@ -67,6 +92,15 @@ pub struct Guard {
 /// subscriber is already installed.
 pub fn init(config: Config) -> Result<Guard, Error> {
     let subscriber = build_subscriber(&config)?;
+
+    // Start the client before the subscriber, so an error logged during
+    // startup is already being reported.
+    let sentry = config
+        .sentry_dsn
+        .clone()
+        .map(|dsn| sentry::init(sentry_options(&config, dsn)));
+    let guard = Guard { sentry };
+
     tracing::subscriber::set_global_default(subscriber).map_err(Error::AlreadyInitialised)?;
 
     match config.log_format {
@@ -74,6 +108,7 @@ pub fn init(config: Config) -> Result<Guard, Error> {
         LogFormat::Json => tracing::info!(
             log_format = config.log_format.as_str(),
             filter = config.filter,
+            reports_errors = guard.reports_errors(),
             "telemetry ready"
         ),
         // Pretty events don't, so this is where a person reads it.
@@ -83,11 +118,34 @@ pub fn init(config: Config) -> Result<Guard, Error> {
             environment = config.environment.as_str(),
             log_format = config.log_format.as_str(),
             filter = config.filter,
+            reports_errors = guard.reports_errors(),
             "telemetry ready"
         ),
     }
 
-    Ok(Guard { _private: () })
+    if !guard.reports_errors() {
+        tracing::debug!("error reporting is off: no SENTRY_DSN is set");
+    }
+
+    Ok(guard)
+}
+
+/// How the Sentry client is configured. Kept separate so the choices are
+/// visible and testable.
+fn sentry_options(config: &Config, dsn: sentry::types::Dsn) -> sentry::ClientOptions {
+    // ClientOptions is non-exhaustive, so set the fields we care about and
+    // leave the rest at their defaults (performance tracing, for one, is off
+    // by default and is not part of R1).
+    let mut options = sentry::ClientOptions::default();
+    options.dsn = Some(dsn);
+    // Tells one deployed build from another in Sentry.
+    options.release = Some(format!("{}@{}", config.service, config.version).into());
+    options.environment = Some(config.environment.as_str().into());
+    options.attach_stacktrace = true;
+    // Never send user identifiers, addresses or headers Sentry would otherwise
+    // infer. We decide what a report contains, not the SDK.
+    options.send_default_pii = false;
+    options
 }
 
 /// Build the subscriber [`init`] installs, writing to standard output.
@@ -126,12 +184,17 @@ where
         ),
     };
 
-    Ok(Registry::default().with(layer).with(filter))
+    Ok(Registry::default()
+        .with(layer)
+        // Turns `tracing::error!` into Sentry events and quieter events into
+        // breadcrumbs. Does nothing until a client exists.
+        .with(sentry_tracing::layer())
+        .with(filter))
 }
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used, clippy::unwrap_used)]
 
     use std::io;
     use std::sync::{Arc, Mutex};
@@ -260,6 +323,60 @@ mod tests {
             Err(other) => panic!("expected an invalid filter, got {other}"),
             Ok(_) => panic!("expected an invalid filter to be rejected"),
         }
+    }
+
+    fn test_dsn() -> sentry::types::Dsn {
+        "https://sup3rsecret@o1.ingest.sentry.io/42"
+            .parse()
+            .unwrap()
+    }
+
+    #[test]
+    fn errors_become_sentry_events_and_quieter_events_do_not() {
+        let config = json_config();
+        let buffer = Buffer::default();
+        let subscriber = subscriber_with_writer(&config, buffer.clone()).unwrap();
+
+        let captured = sentry::test::with_captured_events(|| {
+            tracing::subscriber::with_default(subscriber, || {
+                tracing::info!("workspace woke");
+                tracing::error!(workspace = "demo", "could not reach the relay");
+            });
+        });
+
+        assert_eq!(captured.len(), 1, "only the error should be reported");
+        let event = &captured[0];
+        assert_eq!(event.level, sentry::Level::Error);
+
+        // The quieter event is still logged, and comes along as a breadcrumb
+        // for context.
+        assert_eq!(buffer.events().len(), 2);
+        assert!(
+            event
+                .breadcrumbs
+                .iter()
+                .any(|crumb| crumb.message.as_deref() == Some("workspace woke")),
+            "{:?}",
+            event.breadcrumbs
+        );
+    }
+
+    #[test]
+    fn options_describe_the_build_and_send_no_pii() {
+        let options = sentry_options(&json_config(), test_dsn());
+
+        assert_eq!(options.release.as_deref(), Some("relay@0.2.0"));
+        assert_eq!(options.environment.as_deref(), Some("staging"));
+        assert!(options.attach_stacktrace);
+        assert!(!options.send_default_pii);
+    }
+
+    #[test]
+    fn a_guard_without_a_dsn_reports_nothing() {
+        let guard = Guard { sentry: None };
+
+        assert!(!guard.reports_errors());
+        assert!(format!("{guard:?}").contains("reports_errors: false"));
     }
 
     #[test]
