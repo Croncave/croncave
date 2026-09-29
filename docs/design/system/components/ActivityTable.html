@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ActivityTable · Croncave design system</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<style>body{margin:0;background:#888;font-family:Inter,system-ui,sans-serif} .theme{max-width:960px;margin:0 auto 24px} h2{font:500 12px/16px ui-monospace,monospace;color:#fff;margin:16px auto 8px;max-width:960px;text-transform:uppercase;letter-spacing:.08em}</style>
+</head>
+<body>
+<h2>Light</h2>
+<div class="theme" data-theme="light" style="background:var(--bg)">
+<div class="cc-root cc-dotgrid" style="display:flex;flex-direction:column;gap:12px;padding:24px;">
+  <div style="display:flex;gap:4px;">
+    <button type="button" class="cc-filter" aria-pressed="true">All <span class="cc-filter__count">3</span></button>
+    <button type="button" class="cc-filter" aria-pressed="false">Needs you <span class="cc-filter__count">2</span></button>
+        <button type="button" class="cc-filter" aria-pressed="false">Done <span class="cc-filter__count">1</span></button>
+  </div>
+  <div class="cc-table">
+    <div class="cc-table__head" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;">
+      <button type="button" class="cc-sort">Time</button>
+      <button type="button" class="cc-sort">Name</button>
+      <span class="cc-label">What happened</span>
+      <button type="button" class="cc-sort" data-active="true">Status ↓</button>
+      <span></span>
+    </div>
+    <a href="#" class="cc-table__row" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;text-decoration:none;">
+      <span class="cc-table__num">06:12</span>
+      <span style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Workspace" style="flex:none;color:var(--ink-subtle);"><path d="M21 8 12 3 3 8v8l9 5 9-5z"></path><path d="m3 8 9 5 9-5"></path><path d="M12 13v8"></path></svg><b style="font-weight:500;color:var(--ink);">Real Estate App</b></span>
+      <span>Preview ready, 14 files changed</span>
+      <span><span class="cc-pill cc-pill--needs">Needs you</span></span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+    <a href="#" class="cc-table__row" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;text-decoration:none;">
+      <span class="cc-table__num">04:31</span>
+      <span style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Workspace" style="flex:none;color:var(--ink-subtle);"><path d="M21 8 12 3 3 8v8l9 5 9-5z"></path><path d="m3 8 9 5 9-5"></path><path d="M12 13v8"></path></svg><b style="font-weight:500;color:var(--ink);">Lead Enrichment</b></span>
+      <span>Clearbit key rejected at row 1,204</span>
+      <span><span class="cc-pill cc-pill--failed">Failed</span></span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+    <a href="#" class="cc-table__row" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;text-decoration:none;">
+      <span class="cc-table__num">08:00</span>
+      <span style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Task" style="flex:none;color:var(--ink-subtle);"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg><b style="font-weight:500;color:var(--ink);">Daily News Digest</b></span>
+      <span>Emailed you 5 stories</span>
+      <span><span class="cc-pill cc-pill--done">Done</span></span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+  </div>
+</div>
+</div>
+<h2>Dark</h2>
+<div class="theme" data-theme="dark" style="background:var(--bg)">
+<div class="cc-root cc-dotgrid" style="display:flex;flex-direction:column;gap:12px;padding:24px;">
+  <div style="display:flex;gap:4px;">
+    <button type="button" class="cc-filter" aria-pressed="true">All <span class="cc-filter__count">3</span></button>
+    <button type="button" class="cc-filter" aria-pressed="false">Needs you <span class="cc-filter__count">2</span></button>
+        <button type="button" class="cc-filter" aria-pressed="false">Done <span class="cc-filter__count">1</span></button>
+  </div>
+  <div class="cc-table">
+    <div class="cc-table__head" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;">
+      <button type="button" class="cc-sort">Time</button>
+      <button type="button" class="cc-sort">Name</button>
+      <span class="cc-label">What happened</span>
+      <button type="button" class="cc-sort" data-active="true">Status ↓</button>
+      <span></span>
+    </div>
+    <a href="#" class="cc-table__row" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;text-decoration:none;">
+      <span class="cc-table__num">06:12</span>
+      <span style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Workspace" style="flex:none;color:var(--ink-subtle);"><path d="M21 8 12 3 3 8v8l9 5 9-5z"></path><path d="m3 8 9 5 9-5"></path><path d="M12 13v8"></path></svg><b style="font-weight:500;color:var(--ink);">Real Estate App</b></span>
+      <span>Preview ready, 14 files changed</span>
+      <span><span class="cc-pill cc-pill--needs">Needs you</span></span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+    <a href="#" class="cc-table__row" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;text-decoration:none;">
+      <span class="cc-table__num">04:31</span>
+      <span style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Workspace" style="flex:none;color:var(--ink-subtle);"><path d="M21 8 12 3 3 8v8l9 5 9-5z"></path><path d="m3 8 9 5 9-5"></path><path d="M12 13v8"></path></svg><b style="font-weight:500;color:var(--ink);">Lead Enrichment</b></span>
+      <span>Clearbit key rejected at row 1,204</span>
+      <span><span class="cc-pill cc-pill--failed">Failed</span></span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+    <a href="#" class="cc-table__row" style="grid-template-columns:44px 220px minmax(0,1fr) 96px 16px;text-decoration:none;">
+      <span class="cc-table__num">08:00</span>
+      <span style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Task" style="flex:none;color:var(--ink-subtle);"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg><b style="font-weight:500;color:var(--ink);">Daily News Digest</b></span>
+      <span>Emailed you 5 stories</span>
+      <span><span class="cc-pill cc-pill--done">Done</span></span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+  </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FormSection · Croncave design system</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<style>body{margin:0;background:#888;font-family:Inter,system-ui,sans-serif} .theme{max-width:960px;margin:0 auto 24px} h2{font:500 12px/16px ui-monospace,monospace;color:#fff;margin:16px auto 8px;max-width:960px;text-transform:uppercase;letter-spacing:.08em}</style>
+</head>
+<body>
+<h2>Light</h2>
+<div class="theme" data-theme="light" style="background:var(--bg)">
+<div class="cc-root cc-dotgrid" style="display:flex;gap:20px;align-items:flex-start;padding:24px;">
+  <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:8px;">
+    <section class="cc-section">
+      <button type="button" class="cc-section__head" aria-expanded="true"><span class="cc-section__num">01</span>What<span style="margin-left:auto"></span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);flex:none;"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <div class="cc-section__body">
+        <div class="cc-field"><span class="cc-field__label">Name</span><span class="cc-input">Competitor Prices</span></div>
+        <div class="cc-seg" role="group" aria-label="Kind of task"><button type="button" aria-pressed="false">Ask Claude</button><button type="button" aria-pressed="true">Run a command</button><button type="button" aria-pressed="false">Watch a page</button></div>
+        <div class="cc-field"><span class="cc-field__label">Command</span><span class="cc-input cc-input--mono">python scrape.py</span><span class="cc-help">Runs from the task's folder.</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+          <div class="cc-choice" role="radio" aria-checked="true" tabindex="0"><span class="cc-choice__radio"></span><div><div class="cc-choice__title">Its own workspace</div><div class="cc-choice__text">Created for this task.</div></div></div>
+          <div class="cc-choice" role="radio" aria-checked="false" tabindex="-1"><span class="cc-choice__radio"></span><div><div class="cc-choice__title">An existing one</div><div class="cc-choice__text">Shares its files.</div></div></div>
+        </div>
+      </div>
+    </section>
+    <section class="cc-section"><button type="button" class="cc-section__head" aria-expanded="false"><span class="cc-section__num">05</span>Limits<span class="cc-section__sum">$0.50 a run · 10 min · retry twice</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);flex:none;"><path d="m9 6 6 6-6 6"></path></svg></button></section>
+  </div>
+  <aside class="cc-summary">
+    <span class="cc-label">In plain words</span>
+    <p class="cc-summary__text">Every weekday at 6:00 AM, Croncave runs this task, then goes back to sleep.</p>
+    <div><div class="cc-fact"><span>Runs a month</span><span>about 22</span></div><div class="cc-fact"><span>Cost</span><span>after a test run</span></div></div>
+    <button type="button" class="cc-btn cc-btn--primary" style="justify-content:center;">Create task</button>
+  </aside>
+</div>
+</div>
+<h2>Dark</h2>
+<div class="theme" data-theme="dark" style="background:var(--bg)">
+<div class="cc-root cc-dotgrid" style="display:flex;gap:20px;align-items:flex-start;padding:24px;">
+  <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:8px;">
+    <section class="cc-section">
+      <button type="button" class="cc-section__head" aria-expanded="true"><span class="cc-section__num">01</span>What<span style="margin-left:auto"></span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);flex:none;"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <div class="cc-section__body">
+        <div class="cc-field"><span class="cc-field__label">Name</span><span class="cc-input">Competitor Prices</span></div>
+        <div class="cc-seg" role="group" aria-label="Kind of task"><button type="button" aria-pressed="false">Ask Claude</button><button type="button" aria-pressed="true">Run a command</button><button type="button" aria-pressed="false">Watch a page</button></div>
+        <div class="cc-field"><span class="cc-field__label">Command</span><span class="cc-input cc-input--mono">python scrape.py</span><span class="cc-help">Runs from the task's folder.</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+          <div class="cc-choice" role="radio" aria-checked="true" tabindex="0"><span class="cc-choice__radio"></span><div><div class="cc-choice__title">Its own workspace</div><div class="cc-choice__text">Created for this task.</div></div></div>
+          <div class="cc-choice" role="radio" aria-checked="false" tabindex="-1"><span class="cc-choice__radio"></span><div><div class="cc-choice__title">An existing one</div><div class="cc-choice__text">Shares its files.</div></div></div>
+        </div>
+      </div>
+    </section>
+    <section class="cc-section"><button type="button" class="cc-section__head" aria-expanded="false"><span class="cc-section__num">05</span>Limits<span class="cc-section__sum">$0.50 a run · 10 min · retry twice</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--ink-subtle);flex:none;"><path d="m9 6 6 6-6 6"></path></svg></button></section>
+  </div>
+  <aside class="cc-summary">
+    <span class="cc-label">In plain words</span>
+    <p class="cc-summary__text">Every weekday at 6:00 AM, Croncave runs this task, then goes back to sleep.</p>
+    <div><div class="cc-fact"><span>Runs a month</span><span>about 22</span></div><div class="cc-fact"><span>Cost</span><span>after a test run</span></div></div>
+    <button type="button" class="cc-btn cc-btn--primary" style="justify-content:center;">Create task</button>
+  </aside>
+</div>
+</div>
+</body>
+</html>
