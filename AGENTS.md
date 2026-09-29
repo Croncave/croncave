@@ -21,14 +21,14 @@ Croncave gives people a private computer in the cloud that keeps working after t
 | [docs/delivery.md](docs/delivery.md) | **Owns the repository layout and the build order.** Also build artifacts, environments and testing |
 | [docs/conventions.md](docs/conventions.md) | How code is written, checked and landed |
 | [docs/decisions/](docs/decisions/) | Decision log. Add an entry for every meaningful decision |
-| [docs/design/mockups.md](docs/design/mockups.md) | Links to the UI mockups |
+| [docs/design/](docs/design/) | **The design system and every designed screen.** Read `design/system/README.md` before any UI work |
 | [docs/history/planning-transcript.md](docs/history/planning-transcript.md) | The full planning conversation, for the reasoning behind decisions |
 
 **Know which kind of doc you are reading before you change it.**
 
 | Kind | Which | Rule |
 | --- | --- | --- |
-| **Snapshot** of a living doc on claude.ai | `product-definition.md`, `architecture.md`, `pricing.md` | Read-only here. The living doc wins if they disagree. Don't edit the snapshot to record a decision — tell the user what to change upstream |
+| **Snapshot** of a living doc on claude.ai | `product-definition.md`, `architecture.md`, `pricing.md`, `design/` | Read-only here. The living doc or canvas wins if they disagree. Don't edit the snapshot to record a decision — tell the user what to change upstream, or to re-export |
 | **Repo-native** | `AGENTS.md`, `delivery.md`, `conventions.md`, `decisions/` | Ours. This is where decisions made while building are recorded |
 
 A decision made in code lands in a repo-native doc and the snapshots will not know about it. When that gap matters, say so and give the user the exact upstream wording.
