@@ -2,7 +2,7 @@
 
 A private computer in the cloud that keeps working after you close your laptop. Hand off overnight AI coding sessions, scheduled scripts and monitors, then come back to plain-language results, a change review, or a private preview of what was built.
 
-**Status:** build step 0 is done — a Cargo workspace, a SvelteKit app, structured logging, error reporting and CI. No product features yet; step 1 builds the agent and relay.
+**Status:** build step 0 is done — a Cargo workspace, a SvelteKit app, structured logging, error reporting and CI. No product features yet; step 1 builds accounts and workspaces.
 
 ## Getting started
 

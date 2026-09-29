@@ -1,6 +1,6 @@
 # Decision log
 
-Every decision with lasting impact gets an entry here, so the reasoning survives. Add new decisions as numbered files, starting at `0019-short-title.md`, using [the template](template.md), and add a row to the table below.
+Every decision with lasting impact gets an entry here, so the reasoning survives. Add new decisions as numbered files, starting at `0020-short-title.md`, using [the template](template.md), and add a row to the table below.
 
 Decisions made during planning (2026-09-28) are summarised in this table. The full reasoning is in the three docs and in `docs/history/planning-transcript.md`.
 
@@ -24,3 +24,4 @@ Decisions made during planning (2026-09-28) are summarised in this table. The fu
 | 0016 | Repo tooling: one Cargo workspace, a shared `crates/telemetry` crate, and `scripts/check.sh` as the only check entry point | Accepted | [0016-repo-tooling.md](0016-repo-tooling.md) |
 | 0017 | Observability: `tracing` for structured logs, Sentry-protocol error reporting with an optional DSN, `rustls` throughout | Accepted | [0017-observability.md](0017-observability.md) |
 | 0018 | Web app: SvelteKit 2 + Svelte 5 with adapter-node, pnpm pinned by corepack, TypeScript strict at `^6`, reading the root `.env` | Accepted | [0018-web-toolchain.md](0018-web-toolchain.md) |
+| 0019 | One build order, following `architecture.md`; `delivery.md` owns the layout and build order; which docs are snapshots and which are repo-native | Accepted | [0019-doc-ownership-and-build-order.md](0019-doc-ownership-and-build-order.md) |

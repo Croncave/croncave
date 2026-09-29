@@ -57,7 +57,7 @@ cp .env.example .env     # once per clone
 
 ## Database migrations
 
-Migrations will live in `crates/db` (created in step 1) and run before each deploy. **Old and new code must both work while a rollout is in progress:** expand first (add the column, backfill, start writing to it), then contract in a later release (stop reading the old column, drop it). Never rename or drop in the same release that stops using something.
+Migrations will live in `crates/db` (created in the accounts and workspaces step) and run before each deploy. **Old and new code must both work while a rollout is in progress:** expand first (add the column, backfill, start writing to it), then contract in a later release (stop reading the old column, drop it). Never rename or drop in the same release that stops using something.
 
 ## Git
 
@@ -68,5 +68,9 @@ Migrations will live in `crates/db` (created in step 1) and run before each depl
 - **Pull requests** use `.github/pull_request_template.md`. Its checklist is not decoration: workspaces never listen, nothing outside the compute driver depends on a provider, no secrets, docs updated.
 
 ## Decisions
+
+**Know which docs you may change.** `product-definition.md`, `architecture.md` and `pricing.md` are snapshots of living docs on claude.ai: read-only here, and the living doc wins. `AGENTS.md`, `delivery.md`, this file and `decisions/` are repo-native and are where decisions made while building are recorded. When a decision leaves a gap in a snapshot, tell the user the exact upstream wording rather than editing the snapshot.
+
+**One copy of each thing.** `delivery.md` owns the repository layout and the build order; `AGENTS.md` summarises and links. Don't paste either back — keeping two copies is what let them drift.
 
 Anything with lasting impact — a library, a protocol shape, a schema pattern, a default that affects privacy or cost — gets a numbered entry in `docs/decisions/`, using the template, with a row added to the index. Record the alternatives you rejected and why; that is the part that is expensive to reconstruct later. If a decision is later contradicted by experience, amend the entry with a dated section rather than editing history.
