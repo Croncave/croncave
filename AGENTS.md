@@ -7,7 +7,7 @@ This file is the shared brief for any AI coding agent working in this repository
 Croncave gives people a private computer in the cloud that keeps working after they close their laptop. It's managed entirely through a web app (no remote desktop). Users hand off overnight AI coding sessions, scheduled scripts, monitors and small apps. They come back to plain-language results, a change review, or a private preview of what was built.
 
 - **App:** `app.croncave.com` (not live yet). **Previews:** a separately registered domain, one subdomain per preview (name to be picked).
-- **Status:** step 1 (accounts and workspaces) is built — sign-in by emailed link, a personal team, workspace records, the app shell — and awaits its first green CI run. Step 2 (workspace compute) is next (see [Build order](#build-order-for-r1)).
+- **Status:** step 2 (workspace compute) is built — the `ComputeDriver` interface with fake and Docker drivers, and workspaces that wake and sleep — and awaits its first green CI run. The Fly driver waits on that account and its terms. Step 3 (the connection) is next (see [Build order](#build-order-for-r1)).
 - **First customers:** technical founders (three are lined up for the R1 alpha). Non-technical users are the long-term goal.
 - **Region:** US only, for users, compute and data.
 
@@ -79,13 +79,13 @@ A decision made in code lands in a repo-native doc and the snapshots will not kn
 
 **[docs/delivery.md](docs/delivery.md) has the full layout.** Rust crates live in `crates/` as one Cargo workspace (`protocol`, `compute`, `control-plane`, `relay`, `ai-gateway`, `agent`, `telemetry`, `db`); the SvelteKit app and its view component library live in `web/`; then `images/`, `templates/`, `infra/`, `e2e/` and `docs/`.
 
-Only `crates/telemetry` and `web/` exist. Create each other part when its build step starts.
+`crates/compute`, `crates/control-plane`, `crates/db`, `crates/telemetry`, `web/` and `e2e/` exist. Create each other part when its build step starts.
 
 ## Build order for R1
 
 **[docs/delivery.md](docs/delivery.md) has the table, with the check that proves each step.** It follows the build order in [docs/architecture.md](docs/architecture.md), with a step 0 added for the repository setup that list doesn't cover.
 
-**0** Repo and CI ✅ · **1** Accounts and workspaces · **2** Workspace compute · **3** Connection · **4** Claude Code sessions · **5** GitHub and change review · **6** Scheduled runs · **7** Home and timeline · **8** Previews, templates and dashboards · **9** Hardening
+**0** Repo and CI ✅ · **1** Accounts and workspaces ✅ · **2** Workspace compute · **3** Connection · **4** Claude Code sessions · **5** GitHub and change review · **6** Scheduled runs · **7** Home and timeline · **8** Previews, templates and dashboards · **9** Hardening
 
 **Step 2 is next.** Each step is delivered in slices small enough to review in one sitting — step 0 took five, step 1 took eight.
 

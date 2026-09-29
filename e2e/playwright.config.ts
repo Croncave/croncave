@@ -35,6 +35,8 @@ const DATABASE_URL =
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './tests/global-setup.ts',
+  globalTeardown: './tests/global-teardown.ts',
   // A sign-in link works exactly once, so a retried test must start over
   // rather than reuse anything.
   retries: process.env.CI ? 1 : 0,
@@ -56,7 +58,10 @@ export default defineConfig({
         CRONCAVE_BIND: '127.0.0.1:8180',
         CRONCAVE_APP_URL: APP,
         CRONCAVE_ENV: 'ci',
-        CRONCAVE_LOG_FORMAT: 'json'
+        CRONCAVE_LOG_FORMAT: 'json',
+        // A real Docker container, not the fake: the point of these tests is
+        // that the whole stack works, and the fake would hide a driver bug.
+        CRONCAVE_COMPUTE_DRIVER: process.env.CRONCAVE_COMPUTE_DRIVER ?? 'local'
       }
     },
     {

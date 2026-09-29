@@ -55,6 +55,13 @@ check_rust() {
     exit 1
   fi
 
+  # The compute driver suite runs against real Docker. It skips itself when
+  # there is no daemon, which must never be what happens in CI.
+  if [ -n "${CI:-}" ] && ! docker info >/dev/null 2>&1; then
+    echo "No Docker daemon, but this is CI. The driver suite must run here." >&2
+    exit 1
+  fi
+
   if [ -n "${DATABASE_URL:-}" ]; then
     say "cargo test"
     cargo test --workspace
