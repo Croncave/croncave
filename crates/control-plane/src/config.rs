@@ -16,6 +16,11 @@ pub const ENV_APP_URL: &str = "CRONCAVE_APP_URL";
 pub const ENV_ENVIRONMENT: &str = "CRONCAVE_ENV";
 /// Where workspaces' computers come from.
 pub const ENV_COMPUTE_DRIVER: &str = "CRONCAVE_COMPUTE_DRIVER";
+/// What a workspace should dial to reach the relay. This is the address as
+/// seen from inside a workspace, which is not the address we bind.
+pub const ENV_WORKSPACE_RELAY_URL: &str = "CRONCAVE_WORKSPACE_RELAY_URL";
+/// How long a workspace may be quiet before it is put to sleep.
+pub const ENV_IDLE_SECONDS: &str = "CRONCAVE_IDLE_SECONDS";
 
 /// Loopback by default: the control plane is reached through the web app, and
 /// nothing should bind a public interface by accident.
@@ -24,6 +29,14 @@ pub const DEFAULT_BIND: &str = "127.0.0.1:8080";
 pub const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
 /// The SvelteKit dev server, which is where a person's browser actually is.
 pub const DEFAULT_APP_URL: &str = "http://localhost:5173";
+
+/// How a container reaches the relay running on the machine hosting it.
+/// `localhost` inside a container is the container.
+pub const DEFAULT_WORKSPACE_RELAY_URL: &str = "ws://host.docker.internal:8080/agent";
+
+/// Ten minutes, as `docs/architecture.md` says. Adjustable per workspace
+/// later, in the details layer.
+pub const DEFAULT_IDLE_SECONDS: u64 = 600;
 
 /// Where a workspace's computer comes from.
 ///
@@ -80,6 +93,10 @@ pub struct Config {
     pub environment: croncave_telemetry::Environment,
     /// Where workspaces' computers come from.
     pub compute_driver: ComputeDriverChoice,
+    /// What a workspace dials to reach the relay.
+    pub workspace_relay_url: String,
+    /// How long a workspace may be quiet before it sleeps.
+    pub idle_for: std::time::Duration,
 }
 
 impl std::fmt::Debug for Config {
@@ -91,6 +108,8 @@ impl std::fmt::Debug for Config {
             .field("app_url", &self.app_url)
             .field("environment", &self.environment)
             .field("compute_driver", &self.compute_driver)
+            .field("workspace_relay_url", &self.workspace_relay_url)
+            .field("idle_for", &self.idle_for)
             .finish()
     }
 }
@@ -149,6 +168,20 @@ impl Config {
             _ => ComputeDriverChoice::default(),
         };
 
+        let workspace_relay_url = var(ENV_WORKSPACE_RELAY_URL)
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| DEFAULT_WORKSPACE_RELAY_URL.to_owned());
+
+        let idle_for = match var(ENV_IDLE_SECONDS) {
+            Some(value) if !value.trim().is_empty() => std::time::Duration::from_secs(
+                value
+                    .trim()
+                    .parse()
+                    .map_err(|_| Error::InvalidIdleSeconds(value))?,
+            ),
+            _ => std::time::Duration::from_secs(DEFAULT_IDLE_SECONDS),
+        };
+
         Ok(Self {
             bind,
             database_url,
@@ -156,6 +189,8 @@ impl Config {
             app_url,
             environment,
             compute_driver,
+            workspace_relay_url,
+            idle_for,
         })
     }
 }

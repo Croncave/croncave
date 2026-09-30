@@ -16,12 +16,17 @@ use std::sync::Arc;
 use tower::ServiceExt as _;
 
 fn state(pool: Pool) -> State {
+    let pool_for_relay = pool.clone();
     State {
         pool,
         mailer: Arc::new(TestMailer::default()),
         app_url: "http://localhost:5173".to_owned(),
         secure_cookies: false,
         compute: Arc::new(FakeDriver::new()),
+        relay: croncave_relay::Relay::new(Arc::new(
+            croncave_control_plane::agents::DatabaseAuthoriser::new(pool_for_relay),
+        )),
+        workspace_relay_url: "ws://host.docker.internal:8080/agent".to_owned(),
     }
 }
 
