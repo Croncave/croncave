@@ -1,6 +1,6 @@
 # Decision log
 
-Every decision with lasting impact gets an entry here, so the reasoning survives. Add new decisions as numbered files, starting at `0024-short-title.md`, using [the template](template.md), and add a row to the table below.
+Every decision with lasting impact gets an entry here, so the reasoning survives. Add new decisions as numbered files, starting at `0025-short-title.md`, using [the template](template.md), and add a row to the table below.
 
 Decisions made during planning (2026-09-28) are summarised in this table. The full reasoning is in the three docs and in `docs/history/planning-transcript.md`.
 
@@ -29,3 +29,4 @@ Decisions made during planning (2026-09-28) are summarised in this table. The fu
 | 0021 | Service shape: axum with the router built apart from the server, migrations at startup, separate liveness and readiness checks, loopback by default | Accepted | [0021-service-shape.md](0021-service-shape.md) |
 | 0022 | Sign in with a one-time emailed link and no passwords; a `Mailer` seam keeps the email provider undecided; sessions are revocable rows | Accepted | [0022-sign-in-with-a-link.md](0022-sign-in-with-a-link.md) |
 | 0023 | The `ComputeDriver` interface: five idempotent operations, no provider vocabulary, one shared suite every driver must pass, computers made lazily, the provider as the truth | Accepted | [0023-compute-driver.md](0023-compute-driver.md) |
+| 0024 | The outgoing connection: WebSocket on 443 with yamux inside, authorisation before the multiplexer, a one-time bootstrap token traded for a workspace-scoped credential | Accepted | [0024-the-outgoing-connection.md](0024-the-outgoing-connection.md) |

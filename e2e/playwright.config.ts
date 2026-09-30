@@ -55,13 +55,20 @@ export default defineConfig({
       reuseExistingServer: false,
       env: {
         DATABASE_URL,
-        CRONCAVE_BIND: '127.0.0.1:8180',
+        // Workspaces are containers, and reach the relay from outside the
+        // host's loopback.
+        CRONCAVE_BIND: '0.0.0.0:8180',
         CRONCAVE_APP_URL: APP,
         CRONCAVE_ENV: 'ci',
         CRONCAVE_LOG_FORMAT: 'json',
         // A real Docker container, not the fake: the point of these tests is
         // that the whole stack works, and the fake would hide a driver bug.
-        CRONCAVE_COMPUTE_DRIVER: process.env.CRONCAVE_COMPUTE_DRIVER ?? 'local'
+        CRONCAVE_COMPUTE_DRIVER: process.env.CRONCAVE_COMPUTE_DRIVER ?? 'local',
+        // What a workspace dials, from inside its container.
+        CRONCAVE_WORKSPACE_RELAY_URL: 'ws://host.docker.internal:8180/agent',
+        // Long enough that a test is not raced by the sweeper, short enough
+        // that a run does not leave containers awake.
+        CRONCAVE_IDLE_SECONDS: '120'
       }
     },
     {

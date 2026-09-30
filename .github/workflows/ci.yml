@@ -144,6 +144,17 @@ jobs:
         working-directory: e2e
       - run: pnpm run install-browsers
         working-directory: e2e
+      # Workspaces run this image; the end-to-end tests start real ones.
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the workspace image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: images/workspace/Dockerfile
+          tags: croncave/workspace:dev
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       # The same script developers run locally, so the two can't drift.
       - run: scripts/check.sh e2e
       - uses: actions/upload-artifact@v4

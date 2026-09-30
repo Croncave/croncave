@@ -14,6 +14,7 @@
   let { data, form } = $props();
 
   let working = $state(false);
+  let running = $state(false);
 
   const lifecycle = $derived(data.workspace.state);
   const awake = $derived(lifecycle === 'awake');
@@ -54,12 +55,21 @@
     <dl>
       <dt>State</dt>
       <dd>{lifecycle}</dd>
+      <dt>Connected</dt>
+      <dd>
+        {#if data.workspace.connected}
+          <span class="cc-dot cc-dot--live"></span> yes
+        {:else}
+          <span class="cc-dot cc-dot--asleep"></span> no
+        {/if}
+      </dd>
       <dt>Runs on</dt>
       <dd>a computer of its own</dd>
     </dl>
 
     <p class="cc-help">
-      There is nothing to run in it yet. The agent, a terminal and real work arrive in later steps.
+      The workspace opens the connection itself. Nothing reaches in: it has no address and nothing
+      inside it listens.
     </p>
 
     <form
@@ -86,6 +96,54 @@
       <p class="problem" role="alert">{form.problem}</p>
     {/if}
   </section>
+
+  {#if data.workspace.connected}
+    <!--
+      A stand-in so the connection can be tried by hand. Sessions and
+      scheduled runs replace it in steps 4 and 6, with records behind them.
+    -->
+    <section class="card run">
+      <span class="cc-label">Run a command</span>
+
+      <form
+        method="POST"
+        action="?/run"
+        use:enhance={() => {
+          running = true;
+          return async ({ update }) => {
+            await update({ reset: false });
+            running = false;
+          };
+        }}
+      >
+        <input
+          class="cc-input cc-input--mono"
+          name="command"
+          value={form?.command ?? 'echo hello'}
+          placeholder="echo hello"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="cc-btn cc-btn--secondary" type="submit" disabled={running}>
+          {running ? 'Running…' : 'Run'}
+        </button>
+      </form>
+
+      {#if form?.ran}
+        <div class="result">
+          <span class="cc-pill cc-pill--{form.ran.succeeded ? 'live' : 'failed'}">
+            <span class="cc-dot cc-dot--{form.ran.succeeded ? 'live' : 'failed'}"></span>
+            {form.ran.outcome}
+          </span>
+          {#if form.ran.output.trim()}
+            <pre>{form.ran.output}</pre>
+          {:else}
+            <p class="cc-help">It printed nothing.</p>
+          {/if}
+        </div>
+      {/if}
+    </section>
+  {/if}
 
   <section class="card">
     <span class="cc-label">Made</span>
@@ -159,6 +217,42 @@
   .made,
   .problem {
     margin: 0;
+  }
+
+  .run {
+    min-width: 420px;
+    flex: 1;
+  }
+
+  .run form {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .run input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  pre {
+    margin: 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 18px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 18rem;
+    overflow: auto;
   }
 
   .made {
