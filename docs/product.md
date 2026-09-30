@@ -1,8 +1,10 @@
-# Croncave: Product Definition
+# Croncave: the product
 
-> **Snapshot.** Exported from the living doc "Croncave: Product Definition" on 2026-09-29. The source of truth is the doc itself: https://claude.ai/code/artifact/239e25ad-38d2-4426-b307-9d6c29ed40d2 (private to the account owner). If this file and the doc disagree, the doc wins; refresh this snapshot when the doc changes.
-
-Sep 28, 2026 · @Treasure
+What Croncave is for, every feature as a user story with its priority and
+release, and the decisions behind them. **This file is the source of truth.**
+It began as a doc on claude.ai and was consolidated here on 2026-09-30, so
+that a change to the product is reviewed in a pull request alongside the code
+it changes.
 
 Croncave gives anyone a private computer in the cloud that works while they're away, managed entirely through a web app instead of a desktop. This doc defines it in two parts: an Amazon-style **PR/FAQ** for the value proposition, and a **User Story Map** of every feature, labelled with **MoSCoW** priorities and sliced into releases.
 
@@ -11,7 +13,7 @@ Croncave gives anyone a private computer in the cloud that works while they're a
 - **Releases:** R1 is a private alpha, R2 is the public launch, R3 is the first expansion, and Later is everything after.
 - Everything here comes from decisions made so far. Anything not yet decided is listed under Open decisions rather than guessed.
 
-How it's built is covered in the companion doc, [Croncave: Technical Architecture](https://claude.ai/code/artifact/33224792-3002-4d1a-b0d4-a1d9686c2315).
+How it's built is covered in the companion doc, [Croncave: Technical Architecture](architecture.md).
 
 ## Press release
 

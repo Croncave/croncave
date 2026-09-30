@@ -1,12 +1,17 @@
-# Croncave: Technical Architecture
+# Croncave: the architecture, and the plan for building it
 
-> **Snapshot.** Exported from the living doc "Croncave: Technical Architecture" on 2026-09-29. The source of truth is the doc itself: https://claude.ai/code/artifact/33224792-3002-4d1a-b0d4-a1d9686c2315 (private to the account owner). If this file and the doc disagree, the doc wins; refresh this snapshot when the doc changes.
-
-Sep 28, 2026 · @Treasure
+How the system is designed and in what order it is built. **This file is the
+source of truth**, consolidated here on 2026-09-30. The separate
+delivery document was folded into the Delivery section below, so the design
+and the plan for realising it stay in step.
 
 ## Summary
 
-This doc proposes how Croncave R1 is built. It's a living draft, and every \[target\] is a proposed number to confirm. It follows the [product definition](https://claude.ai/code/artifact/239e25ad-38d2-4426-b307-9d6c29ed40d2), and nothing here should contradict it.
+How Croncave R1 is built. Every \[target\] is a number still to be confirmed by
+measurement. It follows [the product definition](product.md), and nothing here
+should contradict it; where building has taught us something the design did not
+know, this document is updated and the reason recorded in
+[the decisions](decisions.md).
 
 **Goals: what R1 must do**
 
@@ -108,7 +113,7 @@ Each workspace runs a small agent, a static Rust binary started at boot. It open
 
 **Identity.** When the orchestrator starts a workspace, it hands the VM a one-time bootstrap token. The agent exchanges it for a short-lived credential tied to that one workspace, and that credential is renewed while the connection stays up.
 
-**Transport \[proposed\].** TLS on port 443 with a stream multiplexer (HTTP/2 or yamux) over it. That's mature in Rust, passes through proxies, and needs no special network setup. QUIC is a later option if reconnect speed matters.
+**Transport.** A WebSocket on port 443 with yamux multiplexing inside it. It crosses proxies and corporate networks that only expect HTTP, terminates beside the browser-facing routes, and gives the independent streams above over one outgoing connection. Authorisation happens before the multiplexer starts, so a connection that cannot prove who it is never gets streams at all. QUIC is a later option if reconnect speed matters. See decision 0024.
 
 **What travels over the connection**
 
@@ -298,37 +303,127 @@ We run untrusted, AI-written code for strangers, so the defaults assume any work
 
 **US only.** Compute and data live in US regions. Sign-up checks location and billing address.
 
-## Stack and build order
+## Stack
 
-| Layer | Proposed choice | Why |
+| Layer | Choice | Why |
 | --- | --- | --- |
 | Control plane, relay, AI gateway | Rust: Tokio, axum, sqlx | Long-running, concurrent services where predictable performance matters |
-| Workspace agent | Rust static binary: Tokio, a stream multiplexer, a pseudo-terminal library | One file with no dependencies, easy to bake into every image |
+| Workspace agent | Rust static binary: Tokio and yamux, built against musl | One file with no dependencies, baked into every workspace image |
 | Database | Managed Postgres, US region | Records, the run queue and events in one well-understood store |
 | Files and logs | S3-compatible object storage, US region | Cheap and durable |
 | Compute | Fly Machines, behind our driver interface | See Workspace compute |
 | Web app | TypeScript with SvelteKit | The component library and views live here |
 | Email | Chosen during development: a transactional email provider | R1 notifications |
+| Observability | `tracing` for structured logs; Sentry-protocol error reporting with an optional DSN; `rustls` everywhere | One shared crate, `crates/telemetry`, so every service logs the same shape |
+| Agent ↔ relay transport | A WebSocket on 443 with yamux multiplexing inside it | Crosses proxies, terminates beside the browser routes, gives independent streams over one outgoing connection |
 
-**Build order for R1.** Each step ends with something the three alpha founders can try.
+## Delivery
 
-1. **Skeleton:** sign-in, teams, Postgres, a SvelteKit web app shell.
-2. **Workspaces:** the compute driver on the chosen provider. Create, start, stop, and sleep on idle.
-3. **Connection:** agent and relay, proven with a browser terminal. This is the first real milestone: a cloud computer you reach only through Croncave.
-4. **Claude Code sessions:** both sign-in paths, the API key as an environment variable first, then the AI gateway with caps as the default, and the live session view.
-5. **GitHub:** the app install, branch and pull request, and the first version of the change review.
-6. **Scheduled runs:** scheduler, run records, logs and email notifications.
-7. **Home and timeline:** "needs you," "running" and "done," with usage and spending caps.
-8. **The R1 extras you chose:** in-app private previews with the new-tab fallback, starter templates and the first dashboard components.
-9. **Hardening:** egress filtering, abuse limits and retention jobs. Then the alpha opens.
+How the system is built, tested and shipped. This was a separate document
+until 2026-09-30; keeping it beside the design means a change to one is made
+with the other in view.
 
-## Decisions
+### One repository
 
-- [ ] **Compute provider.** Decided: Fly Machines, from the side-by-side analysis in Workspace compute. Prices and acceptable-use terms still to check.
-- [ ] **AI gateway and Anthropic's terms.** Decided: build the environment-variable mode first, then the gateway as the default. Confirm the terms with Anthropic during development.
-- [ ] **Idle timeout.** Decided: 10 minutes by default, adjustable per workspace in the details layer.
-- [ ] **Resource presets.** Decided during implementation, using real usage.
-- [ ] **Preview domain,** and where previews open. Decided: inside the app, with a new-tab fallback. Domain decided: a separately registered domain with one subdomain per preview, never a path under croncave.com. The exact name is picked when registering.
-- [ ] **Web app framework** and email provider. Decided: TypeScript with SvelteKit. The email provider is chosen during development.
-- [ ] **Metering subscription sessions.** Decided: awake time is enough for caps, and the product says so explicitly.
-- [ ] **Packing workspaces.** When is putting several of one user's workspaces in one VM worth the complexity? Decided: R2, since it cuts costs and informs pricing. R1 runs each workspace as a container, so packing is easy later.
+The platform lives in this single repository. The agent, relay, control plane and web app share one protocol, and most features touch several of them at once. In one repository, a protocol change and every side that uses it land in a single commit and are tested together.
+
+Separate repositories only where something is published for others:
+
+- **SDKs** (R2), such as `croncave` on PyPI and npm, so users can inspect the code they install.
+- **Public templates**, possibly later, for community contributions.
+
+### Planned layout
+
+**This document owns the layout and the build order.** `AGENTS.md` summarises both and links here; neither is copied, because the two copies we once kept had already drifted apart.
+
+Everything but `crates/ai-gateway`, `templates/` and `infra/` exists. Create each other part when its build step starts.
+
+```
+crates/            Rust (one Cargo workspace)
+  protocol/        agent <-> relay messages and shared types (also generates TypeScript types)
+  compute/         ComputeDriver interface + drivers: fake, local (Docker), fly
+  control-plane/   API, scheduler, orchestrator
+  relay/
+  ai-gateway/
+  agent/           static binary that runs inside workspaces
+  telemetry/       structured logging and error reporting, shared by every service
+  db/              Postgres migrations
+web/               SvelteKit app, including the view component library
+images/            workspace base images (agent + Claude Code + common tools)
+templates/         starter templates
+infra/             deploy config per environment
+e2e/               end-to-end tests (Playwright)
+docs/              product, architecture, pricing, delivery, decisions
+```
+
+### What gets built and shipped
+
+| Artifact | Built from | Notes |
+| --- | --- | --- |
+| Server image | control-plane, relay, ai-gateway | One binary with a role flag at first. Split into separate services when scale needs it |
+| Agent binary | agent | Static and versioned. Updated when a workspace wakes |
+| Workspace base image | images | A standard OCI image, so it runs on any provider |
+| Web app | web | SvelteKit build |
+| Database migrations | db | Run before each deploy. Old and new code must both work during a rollout |
+
+### The compute abstraction
+
+The `ComputeDriver` interface is the only place a provider appears: create, start, stop, suspend, snapshot, resize, destroy, status. It starts with three drivers:
+
+1. **Fake:** in memory, for fast tests.
+2. **Local:** Docker containers on a developer machine. They aren't VMs, but they behave the same from the agent's side.
+3. **Fly:** the real provider for R1.
+
+One shared test suite runs against every driver. A new driver (for example our own Firecracker hosts, or another provider if Fly's terms don't work out) only has to pass that suite. The control plane also runs as an ordinary container, not tied to Fly.
+
+### Environments
+
+1. **Local:** one command starts Postgres, MinIO (S3-compatible storage), the server, the web app, and workspaces through the local driver. A fake Claude Code tests sessions without spending tokens.
+2. **CI (GitHub Actions), on every push and pull request:**
+   - unit tests
+   - protocol tests
+   - the driver test suite, on fake and local
+   - end-to-end tests with Playwright: create a workspace, open the terminal, run a task, see it in the timeline, open a preview
+   - security tests: a workspace can't be reached from outside, and egress rules block what they should
+3. **Staging:** real infrastructure, kept apart from the real domain:
+   - a separate Fly organisation
+   - its own domain (such as `staging.croncave.com`) and a separate preview domain
+   - Stripe in test mode
+   - a GitHub App for development
+   - a low-limit Anthropic key
+   - end-to-end tests nightly against real Fly machines, measuring wake times and costs
+
+   The founder uses staging for their own work, as the first real user.
+4. **Production:** `app.croncave.com`, invite-only at first. Everything is separate from staging. Alpha users are on an allowlist, new features ship behind feature flags, and agent updates go to a few workspaces before all of them.
+
+Secrets for staging and production live in GitHub Actions secrets and the provider's secret store. They are never committed.
+
+### Build order and milestone checkpoints
+
+Each step ends with a check that proves it works before the next one starts, and each is delivered in slices small enough to review in one sitting — step 0 took five.
+
+The order is the repository's own. It began as the sequence sketched while planning, with a step 0 added for the repository setup that sketch did not cover, and has been changed since when building proved a different order better — each change recorded in `docs/decisions.md`.
+
+| Step | Proven when |
+| --- | --- |
+| 0. Repo and CI ✅ | CI runs green, with logging and error tracking wired in |
+| 1. Accounts and workspaces ✅ | A person signs in, and a user, a personal team and a workspace record exist and show in the app |
+| 2. Workspace compute ✅ | The shared driver suite passes on fake and local (Docker) in CI, and a workspace starts, reports its state and stops from the app. The same suite against real Fly in staging follows once that account and its terms are settled |
+| 3. Connection ✅ | A command sent from the control plane runs inside a local (Docker) workspace and its output comes back, over a connection the workspace opened itself. Nothing in the workspace listens, and it sleeps once nothing is happening. This is the first real milestone: a cloud computer reachable only through Croncave |
+| 4. Claude Code sessions | A session keeps running after the browser closes, and caps stop it |
+| 5. GitHub and change review | A session opens a pull request, and the review screen shows it |
+| 6. Scheduled runs | A scheduled run wakes a workspace, runs, records the result and lets it sleep, and wake time is measured |
+| 7. Home and timeline | "Needs you," "running" and "done" reflect real events, with usage and spending caps |
+| 8. Previews, templates and dashboards | An app on localhost opens in the app from the preview domain, a template creates a working task, and a workspace shows a dashboard built from standard components |
+| 9. Hardening | Security and abuse tests pass. Then the alpha goes live on the real domain |
+
+**The browser terminal is not in step 3.** It was the demo this step used to prove itself, never an R1 commitment: `product.md` has "Open a terminal in the browser (expert layer)" as Should, R2, and the design canvas has no terminal screen. What step 3 proves instead is the thing the product is about — work happening in a workspace and results coming back. The connection underneath is not optional: steps 4, 6 and 8 all ride on it.
+
+**Sleeping moved to step 3 on purpose.** Idle means no run or session active, no terminal or preview open and nobody looking — every one of those signals arrives with the agent. A timer in step 2 would sleep a workspace in the middle of work and call it idle.
+
+Two notes on the checkpoints. **Step 2's is two-part on purpose** — local proven in CI, Fly proven in staging — so progress on the driver interface isn't blocked on confirming Fly's terms. **Step 8 covers three R1 "Must" features**, not just previews; templates and the first dashboard components belong there too.
+
+### Before launch
+
+- Get written confirmation from Fly that running a platform for our customers is allowed, including a markup on usage (see `pricing.md`).
+- Confirm with Anthropic that the AI gateway attaching a user's own key is allowed, and that built-in features on our own API account, billed at cost, are fine (see AI access and secrets, above).

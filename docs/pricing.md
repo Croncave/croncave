@@ -1,12 +1,11 @@
-# Croncave: Pricing
+# Croncave: pricing
 
-> **Snapshot.** Exported from the living doc "Croncave: Pricing" on 2026-09-29. The source of truth is the doc itself: https://claude.ai/code/artifact/8315518f-e11a-4644-8ac4-1ffa6c6cdf31 (private to the account owner). If this file and the doc disagree, the doc wins; refresh this snapshot when the doc changes.
-
-Sep 28, 2026 · @Treasure
+Tiers, usage billing, caps and the guardrails on the free tier. **This file is
+the source of truth**, consolidated here on 2026-09-30.
 
 ## Summary
 
-Croncave charges a monthly subscription in one of three tiers (Free, Plus and Pro), plus usage. Tiers decide what you're allowed to do. Usage is what you actually consumed, billed at our providers' own rates. This doc proposes the tiers, the usage rates and the guardrails. Every number marked \[proposed\] is a starting point to test with the alpha founders, not a final price. It builds on the [product definition](https://claude.ai/code/artifact/239e25ad-38d2-4426-b307-9d6c29ed40d2) and the [technical architecture](https://claude.ai/code/artifact/33224792-3002-4d1a-b0d4-a1d9686c2315).
+Croncave charges a monthly subscription in one of three tiers (Free, Plus and Pro), plus usage. Tiers decide what you're allowed to do. Usage is what you actually consumed, billed at our providers' own rates. This doc proposes the tiers, the usage rates and the guardrails. Every number marked \[proposed\] is a starting point to test with the alpha founders, not a final price. It builds on the [product definition](product.md) and the [technical architecture](architecture.md).
 
 **Principles**
 

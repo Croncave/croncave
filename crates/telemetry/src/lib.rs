@@ -25,7 +25,7 @@
 //!
 //! **Never log a secret.** Tokens, API keys, GitHub credentials and workspace
 //! credentials must not appear in a field or a message. See
-//! `docs/conventions.md`.
+//! `AGENTS.md`.
 
 pub mod config;
 mod json;

@@ -12,7 +12,7 @@
 
 ## Decisions
 
-<!-- Any new decision recorded in docs/decisions/? Link it, or write "None". -->
+<!-- Any new decision recorded at the top of docs/decisions.md? Name it, or write "None". -->
 
 ## Checklist
 

@@ -9,7 +9,7 @@ import type { Handle } from '@sveltejs/kit';
 
 // Same rule as the Rust services: no DSN means error reporting is off, so
 // local runs and CI need no account and no secret. See
-// docs/decisions/0017-observability.md.
+// docs/decisions.md.
 init({
   dsn: env.SENTRY_DSN || undefined,
   release: `web@${version}`,
