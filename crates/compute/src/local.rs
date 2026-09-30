@@ -157,6 +157,13 @@ impl ComputeDriver for LocalDriver {
         ]);
 
         let host = HostConfig {
+            // The relay runs on the developer's machine, outside the
+            // container. Docker Desktop provides this name; on Linux it has
+            // to be asked for, which is what host-gateway does.
+            extra_hosts: Some(vec!["host.docker.internal:host-gateway".to_owned()]),
+            // Reap the children of anything a command starts, or a workspace
+            // slowly fills with zombies.
+            init: Some(true),
             // Sizes are advisory on a developer machine, but honouring them
             // keeps the local driver behaving like the real one.
             nano_cpus: Some(i64::from(spec.cpus) * 1_000_000_000),
@@ -166,19 +173,16 @@ impl ComputeDriver for LocalDriver {
 
         let config = ContainerCreateBody {
             image: Some(spec.image.clone()),
-            // Nothing runs in a workspace yet; it only has to stay up so it
-            // can be started and stopped. The agent replaces this in step 3.
-            //
-            // It traps SIGTERM and exits, rather than plain `sleep infinity`,
-            // which ignores signals: Docker would then wait out the whole
-            // grace period and kill it, making every stop take ten seconds.
-            // Whatever runs here in future must shut down on SIGTERM too.
-            cmd: Some(vec![
-                "/bin/sh".to_owned(),
-                "-c".to_owned(),
-                "trap 'exit 0' TERM INT; while :; do sleep 1; done".to_owned(),
-            ]),
+            // Usually none: a workspace image starts its own agent. Tests
+            // override it, because a stock image would exit at once.
+            cmd: spec.command.clone(),
             labels: Some(labels),
+            env: Some(
+                spec.env
+                    .iter()
+                    .map(|(key, value)| format!("{key}={value}"))
+                    .collect(),
+            ),
             host_config: Some(host),
             ..Default::default()
         };

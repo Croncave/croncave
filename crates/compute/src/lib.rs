@@ -57,7 +57,10 @@ impl fmt::Debug for ComputeId {
 
 /// What to build. Sizes are plain numbers because every provider expresses
 /// them differently, and translating is the driver's job.
-#[derive(Clone, Debug)]
+///
+/// Its [`fmt::Debug`] lists the names of the environment variables but none
+/// of their values: one of them is the workspace's identity.
+#[derive(Clone)]
 pub struct Spec {
     /// The workspace this belongs to. Drivers label the resource with it, so
     /// a stray one can always be traced back to its owner.
@@ -69,6 +72,33 @@ pub struct Spec {
     pub cpus: u8,
     /// How much memory.
     pub memory_mb: u32,
+    /// What the workspace starts with in its environment: where to find the
+    /// relay, and the one-time token that proves which workspace it is.
+    ///
+    /// These are secrets. A driver puts them in the workspace and never logs
+    /// them.
+    pub env: Vec<(String, String)>,
+    /// What to run instead of the image's own entrypoint.
+    ///
+    /// A workspace image starts its agent by itself and needs none. Tests
+    /// use a stock image that would otherwise exit at once, so they say what
+    /// should keep it up.
+    pub command: Option<Vec<String>>,
+}
+
+impl fmt::Debug for Spec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Spec")
+            .field("workspace_id", &self.workspace_id)
+            .field("image", &self.image)
+            .field("cpus", &self.cpus)
+            .field("memory_mb", &self.memory_mb)
+            .field(
+                "env",
+                &self.env.iter().map(|(key, _)| key).collect::<Vec<_>>(),
+            )
+            .finish()
+    }
 }
 
 impl Spec {
@@ -80,7 +110,23 @@ impl Spec {
             image: image.into(),
             cpus: 1,
             memory_mb: 512,
+            env: Vec::new(),
+            command: None,
         }
+    }
+
+    /// Start the workspace with this in its environment.
+    #[must_use]
+    pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.env.push((key.into(), value.into()));
+        self
+    }
+
+    /// Run this instead of the image's entrypoint.
+    #[must_use]
+    pub fn with_command(mut self, command: Vec<String>) -> Self {
+        self.command = Some(command);
+        self
     }
 }
 
