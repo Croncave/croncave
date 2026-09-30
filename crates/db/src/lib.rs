@@ -6,7 +6,7 @@
 //!
 //! Migrations must work with both the old and the new code while a rollout is
 //! in progress: expand first, contract in a later release. See
-//! `docs/conventions.md`.
+//! `AGENTS.md`.
 
 use std::time::Duration;
 

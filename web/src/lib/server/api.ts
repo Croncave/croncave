@@ -8,7 +8,7 @@
  *
  * The control plane owns sessions and the database. `docs/architecture.md`
  * puts sign-in checking at the edge, which does not exist locally; see
- * `docs/decisions/0022-sign-in-with-a-link.md`.
+ * `docs/decisions.md`.
  */
 
 import { env } from '$env/dynamic/private';

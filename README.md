@@ -32,25 +32,14 @@ Add a variable there whenever you add one to the code.
 
 ## Start here
 
-- **[AGENTS.md](AGENTS.md):** the full project brief (product, principles, architecture, hard rules, build order). Coding agents read this first; `CLAUDE.md` imports it for Claude Code.
-- **[docs/](docs/):**
-  - [product-definition.md](docs/product-definition.md): PR/FAQ and the feature story map
-  - [architecture.md](docs/architecture.md): technical architecture
-  - [pricing.md](docs/pricing.md): tiers and usage billing
-  - [delivery.md](docs/delivery.md): repository layout, environments, testing and milestones
-  - [conventions.md](docs/conventions.md): how code is written, checked and landed
-  - [decisions/](docs/decisions/): decision log
-  - [design/mockups.md](docs/design/mockups.md): UI mockups
-  - [history/planning-transcript.md](docs/history/planning-transcript.md): the planning conversation
-
-## Living documents
-
-The docs in `docs/` are snapshots. The living versions (private to the account owner):
-
-| Doc | Link |
-| --- | --- |
-| Product definition | https://claude.ai/code/artifact/239e25ad-38d2-4426-b307-9d6c29ed40d2 |
-| Technical architecture | https://claude.ai/code/artifact/33224792-3002-4d1a-b0d4-a1d9686c2315 |
-| Pricing | https://claude.ai/code/artifact/8315518f-e11a-4644-8ac4-1ffa6c6cdf31 |
-| UI mockups (design canvas) | https://claude.ai/artifact/UiRePeq7vzwoqQfAosvUG5 |
-| Planning conversation | https://claude.ai/code/session_01RBHRWXhyB6ekKdP7Udki85 |
+- **[AGENTS.md](AGENTS.md):** the brief every coding agent reads first — product,
+  principles, hard rules, and the conventions code is held to. `CLAUDE.md`
+  imports it for Claude Code.
+- **[docs/product.md](docs/product.md):** what Croncave is for, and every
+  feature as a user story with its priority and release.
+- **[docs/architecture.md](docs/architecture.md):** how it is designed, and in
+  what order it is built.
+- **[docs/pricing.md](docs/pricing.md):** tiers, usage billing and caps.
+- **[docs/decisions.md](docs/decisions.md):** every choice with lasting impact,
+  and what was rejected.
+- **[docs/design/](docs/design/):** the design system and every designed screen.

@@ -14,11 +14,9 @@ use croncave_compute::{ComputeDriver, ComputeId, Error as ComputeError, Spec, St
 use croncave_db::Pool;
 use uuid::Uuid;
 
-/// The image a workspace runs until there is an agent to put in it.
-///
-/// Step 2 is about the driver contract — create, start, stop, status — not
-/// about what runs inside. `images/` replaces this in step 3.
-pub const PLACEHOLDER_IMAGE: &str = "alpine:3.21";
+/// The image a workspace runs: the agent, and enough of a system to run
+/// commands. Built from `images/workspace/Dockerfile`.
+pub const WORKSPACE_IMAGE: &str = "croncave/workspace:dev";
 
 /// What can go wrong running a workspace.
 #[derive(Debug, thiserror::Error)]
@@ -34,6 +32,67 @@ pub enum Error {
     /// The database could not be reached.
     #[error("could not reach the database")]
     Database(#[source] sqlx::Error),
+}
+
+/// Note that something happened in a workspace, so the idle timer starts
+/// again.
+///
+/// Called by everything that counts as the workspace being in use. Failing
+/// to record it is not worth failing the request over — the worst case is a
+/// workspace sleeping sooner than it should.
+pub async fn touch(pool: &Pool, workspace_id: Uuid) {
+    let touched = sqlx::query("update workspaces set last_active_at = now() where id = $1")
+        .bind(workspace_id)
+        .execute(pool)
+        .await;
+
+    if let Err(error) = touched {
+        tracing::warn!(%error, %workspace_id, "could not record activity");
+    }
+}
+
+/// Stop every workspace that has been quiet for longer than the timeout.
+///
+/// Returns how many were put to sleep.
+///
+/// # Errors
+///
+/// Returns an error if the database cannot be read.
+pub async fn sleep_idle(
+    pool: &Pool,
+    driver: &dyn ComputeDriver,
+    idle_for: std::time::Duration,
+) -> Result<usize, Error> {
+    let cutoff = time::OffsetDateTime::now_utc() - idle_for;
+
+    // A workspace that is awake but has never been active is one whose
+    // activity we never recorded; treat its creation as the last thing that
+    // happened rather than leaving it awake for ever.
+    let idle: Vec<(Uuid, Uuid)> = sqlx::query_as(
+        "select id, team_id from workspaces
+          where state = 'awake'
+            and coalesce(last_active_at, updated_at) < $1",
+    )
+    .bind(cutoff)
+    .fetch_all(pool)
+    .await
+    .map_err(Error::Database)?;
+
+    let mut slept = 0;
+
+    for (workspace_id, team_id) in idle {
+        match stop(pool, driver, team_id, workspace_id).await {
+            Ok(_) => {
+                tracing::info!(%workspace_id, "nothing was happening, so it went to sleep");
+                slept += 1;
+            }
+            // One workspace refusing to stop must not stop the rest being
+            // swept; it will be tried again on the next pass.
+            Err(error) => tracing::warn!(%error, %workspace_id, "could not put it to sleep"),
+        }
+    }
+
+    Ok(slept)
 }
 
 /// What a workspace's computer is doing, as the provider sees it.
@@ -133,16 +192,32 @@ fn workspace_state(state: State) -> &'static str {
 pub async fn start(
     pool: &Pool,
     driver: &dyn ComputeDriver,
+    relay_url: &str,
     team_id: Uuid,
     workspace_id: Uuid,
 ) -> Result<Computer, Error> {
     let stored = stored(pool, team_id, workspace_id).await?;
 
+    // Every start gets a fresh identity. A container that comes back after
+    // being replaced cannot rejoin on an old one, and a token left inside a
+    // stopped workspace is already spent.
+    let spec = || async {
+        let token = crate::agents::mint_bootstrap(pool, workspace_id)
+            .await
+            .map_err(Error::Database)?;
+
+        Ok::<_, Error>(
+            Spec::new(workspace_id, WORKSPACE_IMAGE)
+                .with_env("CRONCAVE_RELAY_URL", relay_url)
+                .with_env("CRONCAVE_BOOTSTRAP_TOKEN", token)
+                .with_env("CRONCAVE_LOG_FORMAT", "json"),
+        )
+    };
+
     let compute_id = match stored.id_for(driver) {
         Some(id) => id,
         None => {
-            let spec = Spec::new(workspace_id, PLACEHOLDER_IMAGE);
-            let id = driver.create(&spec).await?;
+            let id = driver.create(&spec().await?).await?;
             tracing::info!(%workspace_id, compute_id = %id, driver = driver.name(), "made a computer");
             id
         }
@@ -158,8 +233,7 @@ pub async fn start(
                 %workspace_id,
                 "the computer we had is gone; making another"
             );
-            let spec = Spec::new(workspace_id, PLACEHOLDER_IMAGE);
-            let id = driver.create(&spec).await?;
+            let id = driver.create(&spec().await?).await?;
             driver.start(&id).await?;
             id
         }

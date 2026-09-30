@@ -21,12 +21,17 @@ use tower::ServiceExt as _;
 /// A router plus the mailer it sends through, so a test can read the link.
 fn app(pool: Pool) -> (axum::Router, TestMailer) {
     let mailer = TestMailer::default();
+    let pool_for_relay = pool.clone();
     let state = State {
         pool,
         mailer: Arc::new(mailer.clone()),
         app_url: "http://localhost:5173".to_owned(),
         secure_cookies: false,
         compute: Arc::new(FakeDriver::new()),
+        relay: croncave_relay::Relay::new(Arc::new(
+            croncave_control_plane::agents::DatabaseAuthoriser::new(pool_for_relay),
+        )),
+        workspace_relay_url: "ws://host.docker.internal:8080/agent".to_owned(),
     };
     (router(state), mailer)
 }

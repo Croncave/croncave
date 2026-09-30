@@ -1,4 +1,4 @@
-import { api } from '$lib/server/api';
+import { api, apiJson } from '$lib/server/api';
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -7,6 +7,14 @@ export type Workspace = {
   name: string;
   state: string;
   created_at: string;
+  /** Whether its agent has an open connection to us right now. */
+  connected: boolean;
+};
+
+export type Ran = {
+  output: string;
+  outcome: string;
+  succeeded: boolean;
 };
 
 export const load: PageServerLoad = async (event) => {
@@ -51,5 +59,40 @@ async function run(event: Parameters<Actions[string]>[0], what: 'start' | 'stop'
 
 export const actions: Actions = {
   start: (event) => run(event, 'start'),
-  stop: (event) => run(event, 'stop')
+  stop: (event) => run(event, 'stop'),
+
+  /**
+   * Run a command in the workspace.
+   *
+   * A stand-in for the real thing: sessions and scheduled runs replace it in
+   * steps 4 and 6. It exists so the connection can be tried by hand.
+   */
+  run: async (event) => {
+    const form = await event.request.formData();
+    const command = String(form.get('command') ?? '').trim();
+
+    if (!command) {
+      return fail(400, { problem: 'Type a command to run.' });
+    }
+
+    // Split on spaces only. Quoting and pipes belong to a shell, and
+    // pretending to be one badly is worse than not pretending: ask for `sh
+    // -c` if you want a shell.
+    const [program, ...args] = command.split(/\s+/);
+
+    const response = await apiJson(event, `/workspaces/${event.params.id}/run`, 'POST', {
+      program,
+      args
+    });
+
+    if (response.status === 409) {
+      return fail(409, { problem: 'That workspace is asleep. Wake it first.', command });
+    }
+
+    if (!response.ok) {
+      return fail(502, { problem: "That didn't run. Try again in a moment.", command });
+    }
+
+    return { ran: (await response.json()) as Ran, command };
+  }
 };

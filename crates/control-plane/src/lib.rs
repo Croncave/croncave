@@ -4,6 +4,7 @@
 //! can call it directly; [`serve`] is what the binary runs.
 
 pub mod actor;
+pub mod agents;
 pub mod auth;
 pub mod config;
 mod health;
@@ -44,6 +45,10 @@ pub enum Error {
     #[error("invalid CRONCAVE_ENV value {0:?}: expected local, ci, staging or production")]
     InvalidEnvironment(String),
 
+    /// `CRONCAVE_IDLE_SECONDS` is not a number.
+    #[error("invalid CRONCAVE_IDLE_SECONDS value {0:?}: expected a whole number of seconds")]
+    InvalidIdleSeconds(String),
+
     /// `CRONCAVE_COMPUTE_DRIVER` names a driver we don't have.
     #[error("unknown CRONCAVE_COMPUTE_DRIVER value {0:?}: expected fake or local")]
     UnknownComputeDriver(String),
@@ -81,6 +86,10 @@ pub struct State {
     pub secure_cookies: bool,
     /// Where workspaces' computers come from.
     pub compute: Arc<dyn ComputeDriver>,
+    /// The connections workspaces have opened to us.
+    pub relay: croncave_relay::Relay,
+    /// What a workspace dials to reach the relay.
+    pub workspace_relay_url: String,
 }
 
 impl State {
@@ -92,12 +101,19 @@ impl State {
         compute: Arc<dyn ComputeDriver>,
         config: &Config,
     ) -> Self {
+        // The relay asks the control plane who each connection belongs to,
+        // so it never touches the schema itself.
+        let relay =
+            croncave_relay::Relay::new(Arc::new(agents::DatabaseAuthoriser::new(pool.clone())));
+
         Self {
             pool,
             mailer,
             app_url: config.app_url.clone(),
             secure_cookies: config.environment.is_deployed(),
             compute,
+            relay,
+            workspace_relay_url: config.workspace_relay_url.clone(),
         }
     }
 }
@@ -118,8 +134,12 @@ pub fn router(state: State) -> Router {
             get(workspaces::list).post(workspaces::create),
         )
         .route("/workspaces/{id}", get(workspaces::get))
+        // Where workspace agents dial in. Not for browsers: a workspace's
+        // own connection is the only thing that belongs here.
+        .route("/agent", axum::routing::any(agent_socket))
         .route("/workspaces/{id}/start", post(workspaces::start))
         .route("/workspaces/{id}/stop", post(workspaces::stop))
+        .route("/workspaces/{id}/run", post(workspaces::run))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }
@@ -159,6 +179,15 @@ pub async fn serve(config: Config) -> Result<(), Error> {
             source,
         })?;
 
+    // Sleep by default: nothing else watches for a workspace that has been
+    // left alone, and a workspace awake for no reason is a workspace being
+    // paid for.
+    let sweeper = tokio::spawn(sweep_idle(
+        pool.clone(),
+        Arc::clone(&state.compute),
+        config.idle_for,
+    ));
+
     tracing::info!(bind = %config.bind, "control plane listening");
 
     axum::serve(listener, router(state))
@@ -168,6 +197,8 @@ pub async fn serve(config: Config) -> Result<(), Error> {
             bind: config.bind.to_string(),
             source,
         })?;
+
+    sweeper.abort();
 
     // Let in-flight queries finish rather than dropping the pool underneath
     // them.
@@ -205,6 +236,35 @@ async fn shutdown_signal() {
 
 /// How long a readiness check waits on the database before calling it down.
 const READY_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Put workspaces to sleep once nothing is happening in them.
+///
+/// How often it looks is a fraction of the timeout, so a workspace sleeps
+/// somewhere near when it should without the database being asked constantly.
+async fn sweep_idle(pool: Pool, compute: Arc<dyn ComputeDriver>, idle_for: std::time::Duration) {
+    let every = (idle_for / 4).max(std::time::Duration::from_secs(1));
+    let mut ticker = tokio::time::interval(every);
+
+    loop {
+        ticker.tick().await;
+
+        match orchestrator::sleep_idle(&pool, compute.as_ref(), idle_for).await {
+            Ok(0) => {}
+            Ok(slept) => tracing::info!(slept, "put idle workspaces to sleep"),
+            // The sweeper must outlive a bad night: a database blip should
+            // not stop workspaces ever sleeping again.
+            Err(error) => tracing::warn!(%error, "could not look for idle workspaces"),
+        }
+    }
+}
+
+/// Accept a workspace agent's connection.
+async fn agent_socket(
+    axum::extract::State(state): axum::extract::State<State>,
+    upgrade: axum::extract::WebSocketUpgrade,
+) -> axum::response::Response {
+    upgrade.on_upgrade(move |socket| croncave_relay::serve_agent(state.relay, socket))
+}
 
 /// Connect to the chosen compute provider.
 ///

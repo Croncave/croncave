@@ -28,9 +28,18 @@ use crate::{ComputeDriver, ComputeId, Error, Spec, State};
 pub const TEST_IMAGE: &str = "alpine:3.21";
 
 /// A spec for a workspace nothing else is using.
+///
+/// The stock image would exit the moment it started, so it is given
+/// something to do. It traps SIGTERM and leaves promptly: plain
+/// `sleep infinity` ignores signals, which made Docker wait out the whole
+/// grace period and turned every stop into ten seconds.
 #[must_use]
 pub fn spec() -> Spec {
-    Spec::new(Uuid::now_v7(), TEST_IMAGE)
+    Spec::new(Uuid::now_v7(), TEST_IMAGE).with_command(vec![
+        "/bin/sh".to_owned(),
+        "-c".to_owned(),
+        "trap 'exit 0' TERM INT; while :; do sleep 1; done".to_owned(),
+    ])
 }
 
 /// A new computer exists, and is not running.

@@ -25,12 +25,17 @@ fn app(pool: Pool) -> (axum::Router, TestMailer) {
 fn app_with_compute(pool: Pool) -> (axum::Router, TestMailer, FakeDriver) {
     let mailer = TestMailer::default();
     let compute = FakeDriver::new();
+    let pool_for_relay = pool.clone();
     let state = State {
         pool,
         mailer: Arc::new(mailer.clone()),
         app_url: "http://localhost:5173".to_owned(),
         secure_cookies: false,
         compute: Arc::new(compute.clone()),
+        relay: croncave_relay::Relay::new(Arc::new(
+            croncave_control_plane::agents::DatabaseAuthoriser::new(pool_for_relay),
+        )),
+        workspace_relay_url: "ws://host.docker.internal:8080/agent".to_owned(),
     };
     (router(state), mailer, compute)
 }
@@ -502,4 +507,157 @@ async fn a_provider_having_a_bad_day_is_reported_as_such(pool: Pool) {
     // Not a 500: the request was fine, the provider is the problem, and the
     // difference is what tells someone whether to retry or to look at Docker.
     assert_eq!(status, StatusCode::BAD_GATEWAY);
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_workspace_left_alone_goes_to_sleep(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool.clone());
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+
+    // Nothing has happened for a while. Reaching past the clock beats
+    // waiting ten minutes.
+    sqlx::query("update workspaces set last_active_at = now() - interval '1 hour'")
+        .execute(&pool)
+        .await
+        .expect("age the workspace");
+
+    let slept = croncave_control_plane::orchestrator::sleep_idle(
+        &pool,
+        &compute,
+        std::time::Duration::from_secs(600),
+    )
+    .await
+    .expect("sweep");
+
+    assert_eq!(slept, 1);
+
+    let (_, body) = send(
+        &app,
+        "GET",
+        &format!("/workspaces/{id}"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(body["state"], "asleep");
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_workspace_in_use_is_left_alone(pool: Pool) {
+    let (app, mailer, compute) = app_with_compute(pool.clone());
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/start"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+
+    // Starting it counts as using it, so a sweep straight afterwards must
+    // not take it away from under someone.
+    let slept = croncave_control_plane::orchestrator::sleep_idle(
+        &pool,
+        &compute,
+        std::time::Duration::from_secs(600),
+    )
+    .await
+    .expect("sweep");
+
+    assert_eq!(slept, 0, "a workspace someone is using must stay awake");
+
+    let (_, body) = send(
+        &app,
+        "GET",
+        &format!("/workspaces/{id}"),
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(body["state"], "awake");
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn running_something_in_a_workspace_that_is_asleep_says_so(pool: Pool) {
+    let (app, mailer) = app(pool);
+    let cookie = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&cookie),
+        Some(json!({ "name": "Stock Watcher" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    let (status, _) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/run"),
+        Some(&cookie),
+        Some(json!({ "program": "echo", "args": ["hello"] })),
+    )
+    .await;
+
+    // Not a 500 and not a hang: there is simply nothing there to ask, and
+    // the answer tells a person to wake it.
+    assert_eq!(status, StatusCode::CONFLICT);
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn one_team_cannot_run_anything_in_another_teams_workspace(pool: Pool) {
+    let (app, mailer) = app(pool);
+
+    let founder = sign_in(&app, &mailer, "founder@example.com").await;
+    let (_, made) = send(
+        &app,
+        "POST",
+        "/workspaces",
+        Some(&founder),
+        Some(json!({ "name": "Private Plans" })),
+    )
+    .await;
+    let id = made["id"].as_str().expect("an id");
+
+    let stranger = sign_in(&app, &mailer, "stranger@example.com").await;
+    let (status, _) = send(
+        &app,
+        "POST",
+        &format!("/workspaces/{id}/run"),
+        Some(&stranger),
+        Some(json!({ "program": "cat", "args": ["/etc/passwd"] })),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }

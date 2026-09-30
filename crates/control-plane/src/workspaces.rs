@@ -22,11 +22,38 @@ use crate::{State, orchestrator};
 /// The longest a workspace name may be.
 const MAX_NAME: usize = 100;
 
+/// How long a command may run before it is stopped.
+///
+/// A workspace runs code we did not write. Long work belongs to sessions and
+/// runs, which are built for it; a command typed into a box is not.
+const COMMAND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
 /// What creating a workspace carries.
 #[derive(Debug, Deserialize)]
 pub struct NewWorkspace {
     /// What to call it.
     pub name: String,
+}
+
+/// What a workspace should be asked to run.
+#[derive(Debug, Deserialize)]
+pub struct RunCommand {
+    /// The program.
+    pub program: String,
+    /// Its arguments.
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+/// What running it did.
+#[derive(Debug, Serialize)]
+pub struct RanCommand {
+    /// Everything it printed, both streams as they arrived.
+    pub output: String,
+    /// The word for how it ended: done, failed, timed out, stopped.
+    pub outcome: String,
+    /// Whether it worked.
+    pub succeeded: bool,
 }
 
 /// A workspace, as the app sees one.
@@ -41,6 +68,12 @@ pub struct WorkspaceView {
     /// When it was made.
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    /// Whether its agent is connected right now.
+    ///
+    /// Not stored: asked of the relay, because a row cannot know whether a
+    /// connection is still there.
+    #[sqlx(default)]
+    pub connected: bool,
 }
 
 /// What can go wrong.
@@ -64,6 +97,11 @@ pub enum Error {
     #[error("the workspace's computer could not be reached")]
     Compute(#[source] croncave_compute::Error),
 
+    /// The workspace is not connected, so there is nothing to ask. A person
+    /// can act on this by waking it.
+    #[error("that workspace is asleep, or still waking up")]
+    NotConnected,
+
     /// Something on our side failed.
     #[error("something went wrong")]
     Internal,
@@ -82,6 +120,8 @@ impl axum::response::IntoResponse for Error {
             Self::NotFound => StatusCode::NOT_FOUND,
             // The request was fine; the provider is the problem.
             Self::Compute(_) => StatusCode::BAD_GATEWAY,
+            // Nothing is wrong: it is simply not there to ask.
+            Self::NotConnected => StatusCode::CONFLICT,
             Self::Auth(_) | Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
@@ -183,6 +223,10 @@ pub async fn get(
     // removed behind our back, and reporting a stale "awake" would be a lie
     // someone acts on. A provider that cannot be reached leaves the stored
     // state alone rather than failing the whole read.
+    // Someone looking at a workspace counts as using it, which is what
+    // stops it sleeping while a person watches.
+    orchestrator::touch(&state.pool, id).await;
+
     match orchestrator::status(&state.pool, state.compute.as_ref(), actor.team_id, id).await {
         Ok(_) => {}
         Err(orchestrator::Error::NotFound) => return Err(Error::NotFound),
@@ -216,7 +260,16 @@ pub async fn start(
     actor: Actor,
     Path(id): Path<Uuid>,
 ) -> Result<Json<WorkspaceView>, Error> {
-    orchestrator::start(&state.pool, state.compute.as_ref(), actor.team_id, id).await?;
+    orchestrator::start(
+        &state.pool,
+        state.compute.as_ref(),
+        &state.workspace_relay_url,
+        actor.team_id,
+        id,
+    )
+    .await?;
+
+    orchestrator::touch(&state.pool, id).await;
 
     read(&state, actor, id).await
 }
@@ -254,7 +307,53 @@ async fn read(state: &State, actor: Actor, id: Uuid) -> Result<Json<WorkspaceVie
         Error::Internal
     })?;
 
-    workspace.map(Json).ok_or(Error::NotFound)
+    let mut workspace = workspace.ok_or(Error::NotFound)?;
+    workspace.connected = state.relay.is_connected(id).await;
+
+    Ok(Json(workspace))
+}
+
+/// Run a command inside a workspace.
+///
+/// # Errors
+///
+/// [`Error::NotFound`] if the workspace is not this team's, or
+/// [`Error::NotConnected`] if its agent is not there — which is a different
+/// thing from a failure, and the caller can act on it by waking it.
+pub async fn run(
+    AxumState(state): AxumState<State>,
+    actor: Actor,
+    Path(id): Path<Uuid>,
+    Json(body): Json<RunCommand>,
+) -> Result<Json<RanCommand>, Error> {
+    // Scoped first: an id alone must never reach a workspace.
+    let _ = read(&state, actor, id).await?;
+
+    let program = body.program.trim();
+    if program.is_empty() {
+        return Err(Error::InvalidName);
+    }
+
+    // Running something is the clearest sign a workspace is in use.
+    orchestrator::touch(&state.pool, id).await;
+
+    let ran = state
+        .relay
+        .run(id, program, &body.args, COMMAND_TIMEOUT)
+        .await
+        .map_err(|error| match error {
+            croncave_relay::Error::NotConnected => Error::NotConnected,
+            other => {
+                tracing::warn!(%other, workspace_id = %id, "a command went wrong");
+                Error::Internal
+            }
+        })?;
+
+    Ok(Json(RanCommand {
+        output: ran.output,
+        outcome: ran.outcome.word().to_owned(),
+        succeeded: ran.outcome.succeeded(),
+    }))
 }
 
 #[cfg(test)]

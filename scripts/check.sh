@@ -143,6 +143,11 @@ check_e2e() {
   say "cargo build (for the end-to-end tests)"
   cargo build -p croncave-control-plane
 
+  # Workspaces run this image. Docker caches the layers, so a rebuild with
+  # nothing changed is quick; the first one compiles the agent.
+  say "docker build (the workspace image)"
+  docker build -q -f images/workspace/Dockerfile -t croncave/workspace:dev . >/dev/null
+
   say "playwright"
   (cd e2e && pnpm run test)
 }
